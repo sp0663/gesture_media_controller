@@ -14,5 +14,7 @@ Touchless HCI system using hand gestures to control VLC media player.
 
 ## Collaborators
 -SriPrahlad Mukunthan
+<br>
 -Shresh Parthi
+<br>
 -Rushil Jain
