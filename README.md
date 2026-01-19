@@ -11,3 +11,8 @@ Touchless HCI system using hand gestures to control VLC media player.
 - \>90% gesture recognition accuracy
 - <200ms latency
 - ≥15 FPS
+
+## Collaborators
+-SriPrahlad Mukunthan
+-Shresh Parthi
+-Rushil Jain
