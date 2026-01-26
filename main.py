@@ -1,7 +1,7 @@
 import cv2
 import time
 from hand_tracker import HandTracker
-from gesture_recogniser import recognise_gesture 
+from gesture_recogniser import recognise_gesture
 from media_controller import MediaController
 from config import GESTURE_HOLD_TIME, DEBUG
 
@@ -21,7 +21,7 @@ print("Press 'q' to quit")
 
 while True:
     success, frame = cap.read()
-    current_time = time.time()  # Fixed typo: currrent → current
+    current_time = time.time()
 
     if not success:
         print("Failed to capture frame")
@@ -35,6 +35,7 @@ while True:
     if len(landmarks) > 0:
         current_gesture = recognise_gesture(landmarks)
         
+        # Debouncing logic
         if current_gesture == last_gesture:
             if gesture_start_time and (current_time - gesture_start_time) > GESTURE_HOLD_TIME:
                 if not triggered and current_gesture != 'unknown':
@@ -43,14 +44,16 @@ while True:
                     if DEBUG:
                         print(f"Executed: {current_gesture}")
         else:
-            last_gesture = current_gesture
+            last_gesture = current_gesture 
             gesture_start_time = current_time
             triggered = False
         
+        # Display current gesture
         color = (0, 255, 0) if current_gesture != 'unknown' else (0, 165, 255)
         cv2.putText(frame, f"Gesture: {current_gesture}", 
                     (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
         
+        # Show hold progress
         if gesture_start_time and current_gesture != 'unknown':
             hold_time = current_time - gesture_start_time
             progress = min(hold_time / GESTURE_HOLD_TIME, 1.0)
@@ -66,9 +69,15 @@ while True:
             cv2.putText(frame, "Hold...", (10, 85), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
     else:
+        # No hand detected - RESET ALL
+        last_gesture = None
+        gesture_start_time = None
+        triggered = False
+        
         cv2.putText(frame, "No hand detected", 
                     (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
+    # Instructions
     cv2.putText(frame, "Fist=Play/Pause | Open Palm=Stop | Q=Quit", 
                 (10, frame.shape[0] - 20), 
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
