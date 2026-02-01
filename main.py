@@ -39,11 +39,11 @@ while True:
         # Debouncing logic
         if current_gesture == last_gesture:
             if gesture_start_time and (current_time - gesture_start_time) > GESTURE_HOLD_TIME:
-                if current_gesture=='peace_sign':
-                    if(current_time - last_execution_time)>0.25:
-                        controller.execute_command(current_gesture)
-                        last_execution_time=current_time
-                        if DEBUG: print(f"VolumeAdjusting : {current_gesture}")
+                # if current_gesture=='':
+                #     if(current_time - last_execution_time)>0.25:
+                #         controller.execute_command(current_gesture)
+                #         last_execution_time=current_time
+                #         if DEBUG: print(f"VolumeAdjusting : {current_gesture}")
                 if not triggered and current_gesture != 'unknown':
                     controller.execute_command(current_gesture)
                     triggered = True
@@ -84,7 +84,7 @@ while True:
                     (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
     # Instructions
-    cv2.putText(frame, "Fist=mute | Open Palm=pause/play | Q=Quit | Peace_sign=increse volume", 
+    cv2.putText(frame, "Fist=mute | Open Palm=pause/play | Q=Quit | Peace_sign=fullscreen", 
                 (10, frame.shape[0] - 20), 
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
 

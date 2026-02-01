@@ -1,4 +1,4 @@
-from utils import finger_extended, count_extended_fingers
+from utils import finger_extended, count_extended_fingers,peace_sign
 
 def recognise_gesture(landmarks):
 
@@ -9,8 +9,9 @@ def recognise_gesture(landmarks):
     elif count == 5:
         gesture = 'open_palm'
     elif count==2:
-        gesture='peace_sign'
+        gesture=peace_sign(landmarks)
     else:
         gesture = 'unknown'
 
     return gesture
+ 

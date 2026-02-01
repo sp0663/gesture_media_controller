@@ -38,3 +38,14 @@ def count_extended_fingers(landmarks):
             count += 1
     
     return count
+
+def peace_sign(landmarks):
+    index_open = finger_extended(landmarks,8)
+    middle_fing_open=finger_extended(landmarks,12)
+    ring_open= finger_extended(landmarks,16)
+    pinky_open=finger_extended(landmarks,20)
+
+    if index_open and middle_fing_open and not ring_open and not pinky_open:
+        gesture='peace_sign'
+        return(gesture) 
+    
