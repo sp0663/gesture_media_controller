@@ -18,15 +18,18 @@ def cal_angle(point1, point2, point3):
     v2 = p3 - p2
 
     cosine = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+    cosine=np.clip(cosine,-1.0,1.0)
     return np.degrees(np.arccos(cosine))
 
 def finger_extended(landmarks, finger_tip_id):
 
-    mcp, pcp, tip = landmarks[finger_tip_id - 3], landmarks[finger_tip_id - 2], landmarks[finger_tip_id]
-    angle1 = cal_angle(mcp, pcp, tip)
-
-    return (angle1 > 160)
-    
+   if finger_tip_id == 4:
+        mcp, ip, tip = landmarks[finger_tip_id - 2], landmarks[finger_tip_id - 1], landmarks[finger_tip_id]
+        angle1 = cal_angle(mcp, ip, tip)
+   else:
+        mcp, pcp, dip = landmarks[finger_tip_id - 3], landmarks[finger_tip_id - 2], landmarks[finger_tip_id - 1]
+        angle1 = cal_angle(mcp, pcp, dip)
+   return(angle1>160)
 
 def count_extended_fingers(landmarks):
 
