@@ -44,10 +44,11 @@ def count_extended_fingers(landmarks):
     
     return count
 
-def pinch(landmarks):
-    thumb_tip = landmarks[4]
-    index_tip = landmarks[8]
-    if cal_distance(thumb_tip, index_tip) < 30:
-        return True
-    else:
-        return False
+def is_pinch(landmarks):
+
+    pinch_distance = cal_distance(landmarks[4], landmarks[8])  # Thumb to index
+    hand_size = cal_distance(landmarks[0], landmarks[9])      # Wrist to middle finger
+    pinch_ratio = pinch_distance / hand_size
+    threshold = 0.2
+
+    return pinch_ratio < threshold
