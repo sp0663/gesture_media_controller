@@ -43,3 +43,11 @@ def count_extended_fingers(landmarks):
             count += 1
     
     return count
+
+def pinch(landmarks):
+    thumb_tip = landmarks[4]
+    index_tip = landmarks[8]
+    if cal_distance(thumb_tip, index_tip) < 30:
+        return True
+    else:
+        return False

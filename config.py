@@ -1,13 +1,15 @@
 # Gesture to VLC command mapping
 GESTURE_COMMANDS = {
     'fist': 'mute',
-    'open_palm': 'play_pause'
+    'open_palm': 'play_pause',
+    'pinch': 'full_screen'
 }
 
 # VLC keyboard shortcuts
 VLC_KEYS = {
     'play_pause': 'space',
-    'mute': 'm'
+    'mute': 'm',
+    'full_screen': 'f'
 }
 
 # Gesture recognition settings

@@ -1,4 +1,4 @@
-from utils import finger_extended, count_extended_fingers
+from utils import finger_extended, count_extended_fingers, pinch
 
 def recognise_gesture(landmarks):
 
@@ -8,6 +8,8 @@ def recognise_gesture(landmarks):
         gesture = 'fist'
     elif count == 5:
         gesture = 'open_palm'
+    elif pinch(landmarks):
+        gesture = 'pinch'
     else:
         gesture = 'unknown'
 
