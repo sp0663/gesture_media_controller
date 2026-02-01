@@ -3,10 +3,10 @@ import time
 from hand_tracker import HandTracker
 from gesture_recogniser import recognise_gesture
 from media_controller import MediaController
-from config import GESTURE_HOLD_TIME, DEBUG
+from config import GESTURE_HOLD_TIME, DEBUG,MAX_HANDS
 
 # Setup
-tracker = HandTracker()
+tracker = HandTracker(max_hands=MAX_HANDS)
 controller = MediaController()
 cap = cv2.VideoCapture(0)
 
@@ -30,7 +30,7 @@ while True:
     
     # Detect hand
     frame = tracker.find_hands(frame, draw=True)
-    landmarks = tracker.get_landmarks(frame)
+    landmarks = tracker.get_landmarks(frame,target_hand='Right')
 
     # Recognize gesture (only if hand detected)
     if len(landmarks) > 0:

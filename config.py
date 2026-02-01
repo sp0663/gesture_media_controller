@@ -17,7 +17,7 @@ COOLDOWN_TIME = 1.5    # seconds - how long after a gesture can you trigger anot
 CONFIDENCE_THRESHOLD = 0.8  
 
 # Hand tracking settings
-MAX_HANDS = 1
+MAX_HANDS = 2
 DETECTION_CONFIDENCE = 0.65
 TRACKING_CONFIDENCE = 0.5
 
