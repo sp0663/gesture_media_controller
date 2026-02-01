@@ -1,6 +1,6 @@
 # Gesture Media Controller
 
-Touchless HCI system using hand gestures to control VLC media player.
+Touchless HCI system using hand gestures to control VLC media player
 
 ## Hardware
 - NVIDIA Jetson Nano
