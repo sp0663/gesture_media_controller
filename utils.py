@@ -51,4 +51,11 @@ def peace_sign(landmarks):
     if index_open and middle_fing_open and not ring_open and not pinky_open:
         gesture='peace_sign'
         return(gesture) 
-    
+
+def volume(landmarks):
+    index_open = finger_extended(landmarks,8)
+    middle_fing_open=finger_extended(landmarks,12)
+    ring_open= finger_extended(landmarks,16)
+    pinky_open=finger_extended(landmarks,20)
+    if index_open and middle_fing_open and ring_open and pinky_open:
+        return('open_palm')

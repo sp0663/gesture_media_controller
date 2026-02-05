@@ -1,25 +1,26 @@
 # Gesture to VLC command mapping
 GESTURE_COMMANDS = {
     'fist': 'mute',
-    'open_palm': 'play_pause',
-    'peace_sign':'fullscreen'
+    'peace_sign':'pause/play',
+    'palm_upward':'volume_up',
+    'palm_downward':'volume_down'
 }
 
 # VLC keyboard shortcuts
 VLC_KEYS = {
-    'play_pause': 'space',
-    'mute': 'm','fullscreen':'f'
+    'mute': 'm','pause/play':'space',
+    'volume_up':'ctrl+up','volume_down':'ctrl+down'
 }
 
 # Gesture recognition settings
-GESTURE_HOLD_TIME = 0.6 # seconds - how long gesture must be held to trigger
-COOLDOWN_TIME = 1.5    # seconds - how long after a gesture can you trigger another
+GESTURE_HOLD_TIME = 0.2 # seconds - how long gesture must be held to trigger
+COOLDOWN_TIME = 2.5   # seconds - how long after a gesture can you trigger another
 CONFIDENCE_THRESHOLD = 0.8  
 
 # Hand tracking settings
 MAX_HANDS = 2
-DETECTION_CONFIDENCE = 0.65
-TRACKING_CONFIDENCE = 0.5
+DETECTION_CONFIDENCE = 0.7
+TRACKING_CONFIDENCE = 0.6
 
 # Performance settings
 TARGET_FPS = 15

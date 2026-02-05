@@ -23,9 +23,14 @@ class MediaController:
                 with self.keyboard.pressed(Key.ctrl):
                     self.keyboard.press(Key.down)
                     self.keyboard.release(Key.down)
-            else:
+            elif key== 'ctrl+up':
+                with self.keyboard.pressed(Key.ctrl):
+                    self.keyboard.press(Key.up)
+                    self.keyboard.release(Key.up)
+            elif key=='m':
                 self.keyboard.press('m')
                 self.keyboard.release('m')
+            
 
 
             
