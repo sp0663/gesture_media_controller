@@ -1,13 +1,14 @@
 import cv2
 import time
 from hand_tracker import HandTracker
-from gesture_recogniser import recognise_gesture
+from gesture_recogniser import GestureRecogniser
 from media_controller import MediaController
 from config import GESTURE_HOLD_TIME, DEBUG
 
 # Setup
 tracker = HandTracker()
 controller = MediaController()
+recon = GestureRecogniser()
 cap = cv2.VideoCapture(0)
 
 # Debouncing variables
@@ -33,17 +34,29 @@ while True:
 
     # Recognize gesture (only if hand detected)
     if len(landmarks) > 0:
-        current_gesture = recognise_gesture(landmarks)
+        current_gesture = recon.recognise_gesture(landmarks)
         
+        wrist_x = landmarks[0][1]
+        print(f"Gesture: {current_gesture} | Wrist X: {wrist_x} | Swipe Start: {recon.swipe_start}")
+    
         # Debouncing logic
         if current_gesture == last_gesture:
-            if gesture_start_time and (current_time - gesture_start_time) > GESTURE_HOLD_TIME:
+            if current_gesture in ['swipe_right', 'swipe_left']:
+                if not triggered:
+                    controller.execute_command(current_gesture)
+                    recon.swipe_start = None
+                    triggered = True
+                    if DEBUG:
+                        print(f"Executed: {current_gesture}")
+            elif gesture_start_time and (current_time - gesture_start_time) > GESTURE_HOLD_TIME:
                 if not triggered and current_gesture != 'unknown':
                     controller.execute_command(current_gesture)
+                    recon.swipe_start = None
                     triggered = True
                     if DEBUG:
                         print(f"Executed: {current_gesture}")
         else:
+            recon.swipe_start = None
             last_gesture = current_gesture 
             gesture_start_time = current_time
             triggered = False

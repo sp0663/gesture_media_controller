@@ -2,14 +2,18 @@
 GESTURE_COMMANDS = {
     'fist': 'mute',
     'open_palm': 'play_pause',
-    'pinch': 'full_screen'
+    'pinch': 'full_screen',
+    'swipe_right': 'move_next',
+    'swipe_left': 'move_prev'
 }
 
 # VLC keyboard shortcuts
 VLC_KEYS = {
     'play_pause': 'space',
     'mute': 'm',
-    'full_screen': 'f'
+    'full_screen': 'f',
+    'move_next': 'n',
+    'move_prev': 'p'
 }
 
 # Gesture recognition settings
