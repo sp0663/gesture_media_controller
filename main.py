@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 import time
 from hand_tracker import HandTracker
 from gesture_recogniser import recognise_gesture
@@ -14,10 +15,11 @@ cap = cv2.VideoCapture(0)
 # Variables for logic
 gesture_start_time = None
 last_gesture = None
-gesture_start_y = 0      # Tracks where the hand started for volume control
+gesture_start_y = None 
+prev_y=None   # Tracks where the hand started for volume control
 triggered = False        # Prevents static gestures from firing multiple times
 last_execution_time = 0  # Limits speed of volume changes
-
+SLIDE_SENSITIVITY=0.03
 print("Gesture Media Controller Started!")
 print("Show gestures to control VLC")
 print("Press 'q' to quit")
@@ -54,40 +56,30 @@ while True:
             duration = current_time - gesture_start_time
             
             # =================================================================
-            # NEW: "FLAPPING" CONTROL (Pitch-Based Volume)
+            #  "SWIPE-UP" CONTROL (Pitch-Based Volume)
             # =================================================================
             if current_gesture == 'open_palm':
-                # Compare Wrist (0) vs Middle Finger Tip (12)
-                wrist_y = landmarks[0][2]
-                tip_y = landmarks[12][2]
-                
-                # Calculate the difference
-                # Positive Value = Fingers are ABOVE Wrist (Normal)
-                # Negative Value = Fingers are BELOW Wrist (Inverted)
-                orientation = wrist_y - tip_y
-                
-                # Threshold: How distinct the pointing needs to be (pixels)
-                dead_zone = 30 
-
-                # CASE 1: Fingers Pointing UP -> Volume UP
-                if orientation > dead_zone:
-                    # Run every 0.15s
-                    if (current_time - last_execution_time) > COOLDOWN_TIME:
-                        controller.execute_command('palm_upward')
-                        last_execution_time = current_time
-                        if DEBUG: print(f"Flap UP: Vol + ({int(orientation)})")
-
-                # CASE 2: Fingers Pointing DOWN -> Volume DOWN
-                elif orientation < -dead_zone:
-                    if (current_time - last_execution_time) > COOLDOWN_TIME:
-                        controller.execute_command('palm_downward')
-                        last_execution_time = current_time
-                        if DEBUG: print(f"Flap DOWN: Vol - ({int(orientation)})")
-                
-                # CASE 3: Hand is Flat/Horizontal -> DO NOTHING (Stop Volume)
+                #reset static gestures
+                last_gesture=None
+                triggered=False
+                gesture_start_time=None
+                h,w,c=frame.shape
+                current_y=[landmarks[8][2]/h,landmarks[12][2]/h,landmarks[16][2]/h,landmarks[20][2]]
+                if gesture_start_y is None:
+                    gesture_start_y=current_y
+                    prev_y=current_y
+                    cv2.putText(frame,"Volume Locked",(10,100),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,255),2)
                 else:
-                    if DEBUG and (current_time - last_execution_time)>0.5:
-                        print("Hand Flat - Volume Stable")
+                    movement=np.array(prev_y)-np.array(current_y)
+                    if np.all(movement>SLIDE_SENSITIVITY):
+                        controller.execute_command('palm_upward')
+                        prev_y=current_y
+                        cv2.putText(frame,"VOL_UP^",(10,100),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2)
+                    elif np.all(movement<-SLIDE_SENSITIVITY):
+                        controller.execute_command('palm_downward')
+                        prev_y=current_y
+                        cv2.putText(frame,"VOL_DOWN^",(10,100),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2)
+
 
             # =================================================================
             # STATIC GESTURES (Mute / Fullscreen)

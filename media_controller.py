@@ -19,17 +19,14 @@ class MediaController:
             elif key=='f':
                     self.keyboard.press('f')
                     self.keyboard.release('f')
-            elif key=='ctrl+down':
-                with self.keyboard.pressed(Key.ctrl):
-                    self.keyboard.press(Key.down)
-                    self.keyboard.release(Key.down)
-            elif key== 'ctrl+up':
-                with self.keyboard.pressed(Key.ctrl):
-                    self.keyboard.press(Key.up)
-                    self.keyboard.release(Key.up)
-            elif key=='m':
-                self.keyboard.press('m')
-                self.keyboard.release('m')
+            elif command=='volume_up':
+                self.keyboard.tap(Key.media_volume_up)
+              
+            elif command=='volume_down':
+                 self.keyboard.tap(Key.media_volume_down)
+                
+
+            
             
 
 

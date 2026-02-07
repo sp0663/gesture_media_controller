@@ -1,6 +1,5 @@
 # Gesture to VLC command mapping
 GESTURE_COMMANDS = {
-    'fist': 'mute',
     'peace_sign':'pause/play',
     'palm_upward':'volume_up',
     'palm_downward':'volume_down'
@@ -8,7 +7,7 @@ GESTURE_COMMANDS = {
 
 # VLC keyboard shortcuts
 VLC_KEYS = {
-    'mute': 'm','pause/play':'space',
+    'pause/play':'space',
     'volume_up':'ctrl+up','volume_down':'ctrl+down'
 }
 
