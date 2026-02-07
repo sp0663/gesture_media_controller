@@ -13,12 +13,12 @@ VLC_KEYS = {
 
 # Gesture recognition settings
 GESTURE_HOLD_TIME = 0.2 # seconds - how long gesture must be held to trigger
-COOLDOWN_TIME = 2.5   # seconds - how long after a gesture can you trigger another
+COOLDOWN_TIME = 1.0   # seconds - how long after a gesture can you trigger another
 CONFIDENCE_THRESHOLD = 0.8  
 
 # Hand tracking settings
 MAX_HANDS = 2
-DETECTION_CONFIDENCE = 0.7
+DETECTION_CONFIDENCE = 0.6
 TRACKING_CONFIDENCE = 0.6
 
 # Performance settings

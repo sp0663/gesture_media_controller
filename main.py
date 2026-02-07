@@ -20,6 +20,7 @@ prev_y=None   # Tracks where the hand started for volume control
 triggered = False        # Prevents static gestures from firing multiple times
 last_execution_time = 0  # Limits speed of volume changes
 SLIDE_SENSITIVITY=0.03
+SLIDE_ERROR=0.30
 print("Gesture Media Controller Started!")
 print("Show gestures to control VLC")
 print("Press 'q' to quit")
@@ -71,11 +72,11 @@ while True:
                     cv2.putText(frame,"Volume Locked",(10,100),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,255),2)
                 else:
                     movement=np.array(prev_y)-np.array(current_y)
-                    if np.all(movement>SLIDE_SENSITIVITY):
+                    if np.all(movement>SLIDE_SENSITIVITY) and (abs(landmarks[0][2]/h- landmarks[16][2]/h)<SLIDE_ERROR):
                         controller.execute_command('palm_upward')
                         prev_y=current_y
                         cv2.putText(frame,"VOL_UP^",(10,100),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2)
-                    elif np.all(movement<-SLIDE_SENSITIVITY):
+                    elif np.all(movement<-SLIDE_SENSITIVITY) and (landmarks[0][2]/h- landmarks[16][2]/h<SLIDE_ERROR):
                         controller.execute_command('palm_downward')
                         prev_y=current_y
                         cv2.putText(frame,"VOL_DOWN^",(10,100),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),2)
