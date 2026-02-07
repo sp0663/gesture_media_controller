@@ -1,35 +1,37 @@
 from utils import count_extended_fingers, is_pinch
+from collections import deque
+import time
 
 class GestureRecogniser:
-    def __init__(self):
-        self.swipe_start = None
+    def __init__(self, buffer_size=10):
+        self.history = deque(maxlen=buffer_size)
+        self.swipe_threshold = 200 # Minimum pixels for a flick
+        self.cooldown = 1        # Seconds between swipes
+        self.last_swipe_time = 0
 
     def recognise_gesture(self, landmarks):
-        SWIPE_THRESHOLD = 100  
+        current_time = time.time()
         count = count_extended_fingers(landmarks)
         
+        curr_x, curr_y = landmarks[0][1], landmarks[0][2]
+        self.history.append((curr_x, curr_y))
+
+        if count == 5 and (current_time - self.last_swipe_time) > self.cooldown:
+            if len(self.history) == self.history.maxlen:
+                start_x, start_y = self.history[0]
+                total_dx = curr_x - start_x
+                total_dy = curr_y - start_y
+
+                if abs(total_dx) > self.swipe_threshold and abs(total_dx) > abs(total_dy) * 2:
+                    self.last_swipe_time = current_time
+                    self.history.clear() # Reset to prevent double triggers
+                    return 'swipe_right' if total_dx > 0 else 'swipe_left'
+
         if is_pinch(landmarks):
-            gesture = 'pinch'
-            self.swipe_start = None
-            
+            return 'pinch'
         elif count == 0:
-            gesture = 'fist'
-            self.swipe_start = None
-            
+            return 'fist'
         elif count == 5:
-            if self.swipe_start is None:
-                self.swipe_start = landmarks[0][1]
-                gesture = 'open_palm'
-            else:
-                movement = landmarks[0][1] - self.swipe_start
-                if movement > SWIPE_THRESHOLD:
-                    gesture = 'swipe_right'
-                elif movement < -SWIPE_THRESHOLD:  
-                    gesture = 'swipe_left'
-                else:
-                    gesture = 'open_palm'
-        else:
-            gesture = 'unknown'
-            self.swipe_start = None
+            return 'open_palm'
             
-        return gesture
+        return 'unknown'
