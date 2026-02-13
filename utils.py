@@ -52,3 +52,11 @@ def is_pinch(landmarks):
     threshold = 0.2
 
     return pinch_ratio < threshold
+
+def volume(landmarks):
+    index_open = finger_extended(landmarks,8)
+    middle_fing_open=finger_extended(landmarks,12)
+    ring_open= finger_extended(landmarks,16)
+    pinky_open=finger_extended(landmarks,20)
+    if index_open and middle_fing_open and ring_open and pinky_open:
+        return True

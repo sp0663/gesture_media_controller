@@ -13,5 +13,14 @@ class MediaController:
             if key == 'space':
                 key = Key.space
 
-            self.keyboard.press(key)
-            self.keyboard.release(key)
+                self.keyboard.press(key)
+                self.keyboard.release(key)
+
+            elif key=='f':
+                    self.keyboard.press('f')
+                    self.keyboard.release('f')
+            elif command=='volume_up':
+                self.keyboard.tap(Key.media_volume_up)
+              
+            elif command=='volume_down':
+                 self.keyboard.tap(Key.media_volume_down)

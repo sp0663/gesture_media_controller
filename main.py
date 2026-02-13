@@ -28,7 +28,7 @@ while True:
     landmarks = tracker.get_landmarks(frame)
 
     if landmarks:
-        current_gesture = recon.recognise_gesture(landmarks)
+        current_gesture = recon.recognise_gesture(landmarks, frame)
         
         # Immediate Trigger for Swipes (The recogniser handles the timing)
         if 'swipe' in current_gesture:
@@ -36,6 +36,12 @@ while True:
             triggered = True
             last_gesture = current_gesture
             if DEBUG: print(f"Swipe Detected: {current_gesture}")
+
+        elif 'palm_' in current_gesture:
+            controller.execute_command(current_gesture)
+            triggered = True
+            last_gesture = current_gesture
+            if DEBUG: print(f"Palm movement Detected: {current_gesture}")
 
         # Debounce Logic for Static Gestures (Fist, Pinch, Palm)
         elif current_gesture == last_gesture and current_gesture != 'unknown':
