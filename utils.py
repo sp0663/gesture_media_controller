@@ -49,7 +49,7 @@ def is_pinch(landmarks):
     pinch_distance = cal_distance(landmarks[4], landmarks[8])  # Thumb to index
     hand_size = cal_distance(landmarks[0], landmarks[9])      # Wrist to middle finger
     pinch_ratio = pinch_distance / hand_size
-    threshold = 0.2
+    threshold = 0.25
 
     return pinch_ratio < threshold
 

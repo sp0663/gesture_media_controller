@@ -32,12 +32,19 @@ class HandTracker:
     
     def get_landmarks(self, frame, hand_no = 0):
         landmark_list = []
-
+        hand_label = None
+        
         if self.results.multi_hand_landmarks:
             my_hand = self.results.multi_hand_landmarks[hand_no]
+            
+            # Get hand label (Left or Right)
+            if self.results.multi_handedness:
+                hand_label = self.results.multi_handedness[hand_no].classification[0].label
+            
             h, w, c = frame.shape
+            
             for id, landmark in enumerate(my_hand.landmark):
                 cx, cy = int(landmark.x * w), int(landmark.y * h)
                 landmark_list.append([id, cx, cy])
-
-        return landmark_list
+        
+        return landmark_list, hand_label
