@@ -91,9 +91,9 @@ class GestureRecogniser:
 
                 
 
-        if is_pinch(landmarks):
-            return 'pinch'
-        elif count == 0:
+        # if is_pinch(landmarks):
+        #    return 'pinch'
+        if count == 0:
             return 'fist'
         elif count == 5:
             return 'open_palm'

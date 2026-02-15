@@ -20,8 +20,8 @@ VLC_KEYS = {
     'move_prev': 'p',
     'volume_up': 'ctrl+up',
     'volume_down': 'ctrl+down',
-    'jump_forward': 'shift+right',
-    'jump_backward': 'shift+left'
+    'jump_forward': 'alt+right',
+    'jump_backward': 'alt+left'
 }
 
 # Gesture recognition settings
