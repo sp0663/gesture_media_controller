@@ -5,8 +5,8 @@ GESTURE_COMMANDS = {
     'pinch': 'full_screen',
     'swipe_right': 'move_next',
     'swipe_left': 'move_prev',
-    'palm_upward': 'volume_up',
-    'palm_downward': 'volume_down',
+    'flap_up': 'volume_up',
+    'flap_down': 'volume_down',
     'pinch_clockwise': 'jump_forward',
     'pinch_anticlockwise': 'jump_backward'
 }
@@ -26,9 +26,11 @@ VLC_KEYS = {
 
 # Gesture recognition settings
 GESTURE_HOLD_TIME = 0.5  # seconds - how long gesture must be held to trigger
-COOLDOWN_TIME = 2.0     # seconds - how long after a gesture can you trigger another
 ACCUMULATION_THRESHOLD = 10.0
-CONFIDENCE_THRESHOLD = 0.8  
+SWIPE_COOLDOWN = 1
+FLAP_COOLDOWN = 0.15
+SWIPE_THRESHOLD = 200
+FLAP_THRESHOLD = 30
 
 # Hand tracking settings
 MAX_HANDS = 1

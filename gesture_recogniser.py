@@ -1,62 +1,63 @@
-from utils import count_extended_fingers, is_pinch, volume, cal_angle
+from utils import count_extended_fingers, is_pinch, cal_angle, cntr_pt
 from collections import deque
 import time
-import numpy as np
-from config import ACCUMULATION_THRESHOLD
+from config import ACCUMULATION_THRESHOLD, SWIPE_COOLDOWN, FLAP_COOLDOWN, SWIPE_THRESHOLD, FLAP_THRESHOLD
 
 class GestureRecogniser:
     def __init__(self, buffer_size=10):
-        self.history = deque(maxlen=buffer_size)
-        self.swipe_threshold = 200 # Minimum pixels for a flick
-        self.cooldown = 1        # Seconds between swipes
-        self.last_swipe_time = 0
-        self.slide_sensitivity = 0.03
-        self.slide_error = 0.30
-        self.rotation_accumulator = 0.0
-        self.prev_angle = None
-        self.locked_hand_type = None
+        self.swipe_history = deque(maxlen=buffer_size)    # Swipe - Palm position history
+        self.last_swipe_time = 0    # Swipe - Last swipe seen
+        self.rotation_accumulator = 0.0     # Pinch rotate - Rotation angle history
+        self.prev_angle = None      # Pinch rotate - Last pinch rotation angle  
+        self.locked_hand_type = None    # Pinch rotate - Locked hand label
+        self.last_flap_time = 0     # Flap - Last flap seen
     
 
     def recognise_gesture(self, landmarks, hand_label, frame):
         current_time = time.time()
         count = count_extended_fingers(landmarks)
         
-        # Swipe
+        # Swipe Variables
         curr_x, curr_y = landmarks[0][1], landmarks[0][2]
-        self.history.append((curr_x, curr_y))
+        self.swipe_history.append((curr_x, curr_y))
 
-        # Pinch Rotate
-        is_locked = False            
-        thumb_pt = np.array(landmarks[4][1:])
-        index_pt = np.array(landmarks[8][1:])
-        center_pt = (thumb_pt + index_pt) // 2
-        center_point = (int(center_pt[0]), int(center_pt[1]))
+        # Pinch Rotate Variables
+        is_locked = False
+        center_point = cntr_pt(landmarks)
         active_hand_type = self.locked_hand_type if self.locked_hand_type else "None"
 
-        if count == 5 and (current_time - self.last_swipe_time) > self.cooldown:
-            if len(self.history) == self.history.maxlen:
-                start_x, start_y = self.history[0]
+
+        # Dynamic Gesture Detection
+
+        # Swipe        
+        if count == 5 and (current_time - self.last_swipe_time) > SWIPE_COOLDOWN:
+            if len(self.swipe_history) == self.swipe_history.maxlen:
+                start_x, start_y = self.swipe_history[0]
                 total_dx = curr_x - start_x
                 total_dy = curr_y - start_y
 
-                if abs(total_dx) > self.swipe_threshold and abs(total_dx) > abs(total_dy) * 2:
+                if abs(total_dx) > SWIPE_THRESHOLD and abs(total_dx) > abs(total_dy) * 2:
                     self.last_swipe_time = current_time
-                    self.history.clear() # Reset to prevent double triggers
+                    self.swipe_history.clear() # Reset to prevent double triggers
                     return 'swipe_right' if total_dx > 0 else 'swipe_left'
 
-        elif volume(landmarks):
-            h, w, c = frame.shape
-            current_y=[landmarks[8][2]/h,landmarks[12][2]/h,landmarks[16][2]/h,landmarks[20][2]]
-            prev_y=current_y
-            movement=np.array(prev_y)-np.array(current_y)
-            if np.all(movement>self.slide_sensitivity) and (abs(landmarks[0][2]/h- landmarks[16][2]/h)<self.slide_error):
-                return 'palm_upward'
-                prev_y=current_y
-            elif np.all(movement<-self.slide_sensitivity) and (landmarks[0][2]/h- landmarks[16][2]/h<self.slide_error):
-                prev_y=current_y
-                return 'palm_downward'
-        
-        elif is_pinch(landmarks):
+        # Flap
+        if count == 5 and (current_time - self.last_flap_time) > FLAP_COOLDOWN:
+            tip_y = landmarks[12][2]
+            orientation = curr_y - tip_y
+
+            # CASE 1: Fingers Pointing UP -> Volume UP
+            if orientation > FLAP_THRESHOLD:
+                self.last_flap_time = current_time
+                return 'flap_up'
+
+            # CASE 2: Fingers Pointing DOWN -> Volume DOWN
+            elif orientation < -FLAP_THRESHOLD:
+                self.last_flap_time = current_time
+                return 'flap_down'
+
+        # Pinch Rotate
+        if is_pinch(landmarks):
             is_locked = True
             current_angle = cal_angle(landmarks[4], [0,0,0], landmarks[8])
             current_hand_type = hand_label
@@ -90,10 +91,11 @@ class GestureRecogniser:
                     return 'pinch_anticlockwise'
 
                 
+        # Static gestures detection
 
-        # if is_pinch(landmarks):
-        #    return 'pinch'
-        if count == 0:
+        if is_pinch(landmarks):
+            return 'pinch'
+        elif count == 0:
             return 'fist'
         elif count == 5:
             return 'open_palm'

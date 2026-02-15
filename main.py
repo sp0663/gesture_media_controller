@@ -37,11 +37,11 @@ while True:
             last_gesture = current_gesture
             if DEBUG: print(f"Swipe Detected: {current_gesture}")
 
-        elif 'palm_' in current_gesture:
+        elif 'flap' in current_gesture:
             controller.execute_command(current_gesture)
             triggered = True
             last_gesture = current_gesture
-            if DEBUG: print(f"Palm movement Detected: {current_gesture}")
+            if DEBUG: print(f"Flap Detected: {current_gesture}")
 
         elif 'pinch_' in current_gesture:
             controller.execute_command(current_gesture)

@@ -35,6 +35,12 @@ class MediaController:
                 elif main_key == 'left':
                     self.keyboard.press(Key.left)
                     self.keyboard.release(Key.left)
+                elif main_key == 'up':
+                    self.keyboard.press(Key.up)
+                    self.keyboard.release(Key.up)
+                elif main_key == 'down':
+                    self.keyboard.press(Key.down)
+                    self.keyboard.release(Key.down)
                 else:
                     self.keyboard.press(main_key)
                     self.keyboard.release(main_key)

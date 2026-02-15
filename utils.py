@@ -53,10 +53,8 @@ def is_pinch(landmarks):
 
     return pinch_ratio < threshold
 
-def volume(landmarks):
-    index_open = finger_extended(landmarks,8)
-    middle_fing_open=finger_extended(landmarks,12)
-    ring_open= finger_extended(landmarks,16)
-    pinky_open=finger_extended(landmarks,20)
-    if index_open and middle_fing_open and ring_open and pinky_open:
-        return True
+def cntr_pt(landmarks):
+        thumb_pt = np.array(landmarks[4][1:])
+        index_pt = np.array(landmarks[8][1:])
+        center_pt = (thumb_pt + index_pt) // 2
+        return (int(center_pt[0]), int(center_pt[1]))
