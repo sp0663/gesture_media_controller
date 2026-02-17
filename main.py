@@ -20,10 +20,54 @@ print("Gesture Media Controller Started!")
 print("Show gestures to control VLC")
 print("Press 'q' to quit")
 
+def draw_debug_overlay(frame, recon):
+    """
+    Draws internal state of the recogniser on the frame.
+    """
+    h, w, _ = frame.shape
+    
+    # 1. DRAW SWIPE TRAIL (Yellow)
+    # This visualizes the 'swipe_history' list from the recogniser
+    history = list(recon.swipe_history)
+    if len(history) > 1:
+        for i in range(len(history) - 1):
+            # Connect the dots in the history buffer
+            pt1 = (int(history[i][0]), int(history[i][1]))
+            pt2 = (int(history[i+1][0]), int(history[i+1][1]))
+            # Draw line: Yellow, thickness increases with newer points
+            cv2.line(frame, pt1, pt2, (0, 255, 255), 2) 
+
+    # 2. DRAW STATUS PANEL (Top Right Corner)
+    # Background box for readability
+    cv2.rectangle(frame, (w - 220, 0), (w, 120), (0, 0, 0), -1)
+    
+    # Rotation Accumulator (Pink)
+    # Shows how close you are to triggering a volume change
+    cv2.putText(frame, f"Rot Accum: {recon.rotation_accumulator:.1f}", (w - 210, 30), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
+
+    # Swipe Buffer Size (Yellow)
+    # Shows how many data points are currently tracking movement
+    cv2.putText(frame, f"Swipe Buffer: {len(recon.swipe_history)}", (w - 210, 60), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+    
+    # Pinch Lock Status (Green/Red)
+    # Shows if the system has locked onto a specific hand type
+    lock_status = recon.locked_hand_type if recon.locked_hand_type else "None"
+    color = (0, 255, 0) if recon.locked_hand_type else (0, 0, 255)
+    cv2.putText(frame, f"Lock: {lock_status}", (w - 210, 90), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
 while True:
     success, frame = cap.read()
     if not success: break
     
+    # --- CHANGE MADE HERE ---
+    # Flip the frame horizontally so it acts like a mirror
+    # Moving hand Right physically = Moving hand Right on screen
+    frame = cv2.flip(frame, 1)  
+    # ------------------------
+
     frame = tracker.find_hands(frame)
     landmarks, hand_label = tracker.get_landmarks(frame)
 
@@ -62,6 +106,7 @@ while True:
             last_gesture = current_gesture
             gesture_start_time = time.time()
             triggered = False
+        
         # Display current gesture
         color = (0, 255, 0) if current_gesture != 'unknown' else (0, 165, 255)
         cv2.putText(frame, f"Gesture: {current_gesture}", 
@@ -85,6 +130,8 @@ while True:
     else:
         last_gesture = None
         triggered = False
+    
+    if DEBUG: draw_debug_overlay(frame, recon)
 
     cv2.imshow("Gesture Media Controller", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'): break

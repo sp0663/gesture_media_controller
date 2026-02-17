@@ -1,88 +1,90 @@
 import cv2
-from hand_tracker import HandTracker
+import numpy as np
 import csv
+import os
+import sys
 
-def get_samples(sample, landmarks):
-    wrist_x = landmarks[0][1]
-    wrist_y = landmarks[0][2]
-    
-    for landmark in landmarks:
-        relative_x = landmark[1] - wrist_x
-        relative_y = landmark[2] - wrist_y
-        sample.append(relative_x)
-        sample.append(relative_y)
+# Hack to import HandTracker from parent folder if needed
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+try:
+    from hand_tracker import HandTracker
+except ImportError:
+    # If running inside the subfolder and hand_tracker is there too
+    from hand_tracker import HandTracker
 
-
-tracker = HandTracker()
+# Setup
 cap = cv2.VideoCapture(0)
-data = []
-mode = None  # Current capture mode
-frame_count = 0
-capture_interval = 5  # Capture every 5 frames
+tracker = HandTracker()
 
-print("Auto-Capture Data Collector")
-print("P = Start pinch mode | N = Start not-pinch mode")
-print("X = Stop capturing | S = Save | Q = Quit")
+data = []
+labels = []
+
+# The 6 classes for the Hybrid Controller
+class_map = {
+    0: "Neutral",
+    1: "Open Palm",
+    2: "Flap UP",
+    3: "Flap DOWN",
+    4: "Pinch",
+    5: "Fist"
+}
+
+print("=== DATA COLLECTION STARTED ===")
+for k, v in class_map.items():
+    print(f"Press '{k}' to record: {v}")
+print("Press 'q' to Save & Quit")
 
 while True:
     success, frame = cap.read()
-
-    if not success:
-        print("Failed to capture frame")
-        break
-
-    frame = tracker.find_hands(frame, draw=True)
-    landmarks = tracker.get_landmarks(frame)
+    if not success: break
     
-    frame_count += 1
+    # Mirroring matches main.py
+    frame = cv2.flip(frame, 1)
+    frame = tracker.find_hands(frame)
+    # Get landmarks (raw list)
+    landmarks_raw = tracker.get_landmarks(frame)
     
-    # Auto-capture if in a mode
-    if mode and len(landmarks) > 0 and frame_count % capture_interval == 0:
-        sample = [mode]
-        get_samples(sample, landmarks)
-        data.append(sample)
-    
-    # Display current mode
-    if mode:
-        cv2.putText(frame, f"MODE: {mode.upper()} (auto-capturing)", 
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    # Handle the tuple return type if using the updated tracker
+    if isinstance(landmarks_raw, tuple):
+        landmarks = landmarks_raw[0]
     else:
-        cv2.putText(frame, "MODE: NONE (press P or N)", 
-                    (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-    
-    # Sample count
-    pinch_count = sum(1 for s in data if s[0] == 'pinch')
-    not_pinch_count = sum(1 for s in data if s[0] == 'not_pinch')
-    cv2.putText(frame, f"Pinch: {pinch_count} | Not-Pinch: {not_pinch_count}", 
-                (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
-    
-    cv2.putText(frame, "TIP: Move hand around!", 
-                (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+        landmarks = landmarks_raw
 
-    cv2.imshow("Collect Data (Auto)", frame)
-    key = cv2.waitKey(1) & 0xFF
+    if landmarks:
+        # Normalize: Wrist (point 0) becomes (0,0)
+        wrist_x, wrist_y = landmarks[0][1], landmarks[0][2]
+        
+        normalized_row = []
+        for lm in landmarks:
+            normalized_row.append(lm[1] - wrist_x)
+            normalized_row.append(lm[2] - wrist_y)
+        
+        # Check key press
+        key = cv2.waitKey(1) & 0xFF
+        if ord('0') <= key <= ord('5'):
+            class_id = int(chr(key))
+            
+            # Store: [label, x0, y0, x1, y1, ... x20, y20]
+            row = [class_id] + normalized_row
+            data.append(row)
+            
+            # Visual feedback
+            count = sum(1 for d in data if d[0] == class_id)
+            cv2.putText(frame, f"Rec: {class_map[class_id]} ({count})", 
+                       (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            
+    cv2.imshow("Data Collector", frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'): break
 
-    if key == ord('p'):
-        mode = 'pinch'
-        print("Started capturing PINCH")
-
-    elif key == ord('n'):
-        mode = 'not_pinch'
-        print("Started capturing NOT-PINCH")
-    
-    elif key == ord('x'):
-        mode = None
-        print("Stopped capturing")
-
-    elif key == ord('s'):
-        with open('gesture_data.csv', 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerows(data)
-        print(f"Saved {len(data)} samples!")
-        break
-
-    elif key == ord('q'):
-        break
+# Save to CSV
+if data:
+    print(f"Saving {len(data)} samples...")
+    with open('gesture_data.csv', 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerows(data)
+    print("Success! Saved to 'gesture_data.csv'")
+else:
+    print("No data recorded.")
 
 cap.release()
 cv2.destroyAllWindows()
