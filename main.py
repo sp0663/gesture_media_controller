@@ -30,7 +30,7 @@ while True:
     if landmarks:
         current_gesture = recon.recognise_gesture(landmarks, hand_label, frame)
         
-        # Immediate Trigger for Swipes (The recogniser handles the timing)
+        # Immediate Trigger for dynamic gestures (The recogniser handles the timing)
         if 'swipe' in current_gesture:
             controller.execute_command(current_gesture)
             triggered = True

@@ -1,4 +1,4 @@
-from utils import count_extended_fingers, is_pinch, cal_angle, cntr_pt
+from utils import count_extended_fingers, is_pinch, cal_angle, cntr_pt, get_hand_orientation
 from collections import deque
 import time
 from config import ACCUMULATION_THRESHOLD, SWIPE_COOLDOWN, FLAP_COOLDOWN, SWIPE_THRESHOLD, FLAP_THRESHOLD
@@ -11,11 +11,13 @@ class GestureRecogniser:
         self.prev_angle = None      # Pinch rotate - Last pinch rotation angle  
         self.locked_hand_type = None    # Pinch rotate - Locked hand label
         self.last_flap_time = 0     # Flap - Last flap seen
+        self.has_rotated = False    # State to separate pinch from rotate
     
 
     def recognise_gesture(self, landmarks, hand_label, frame):
         current_time = time.time()
         count = count_extended_fingers(landmarks)
+        orientation = get_hand_orientation(landmarks)
         
         # Swipe Variables
         curr_x, curr_y = landmarks[0][1], landmarks[0][2]
@@ -38,21 +40,28 @@ class GestureRecogniser:
 
                 if abs(total_dx) > SWIPE_THRESHOLD and abs(total_dx) > abs(total_dy) * 2:
                     self.last_swipe_time = current_time
-                    self.swipe_history.clear() # Reset to prevent double triggers
+                    self.swipe_history.clear() 
                     return 'swipe_right' if total_dx > 0 else 'swipe_left'
 
-        # Flap
-        if count == 5 and (current_time - self.last_flap_time) > FLAP_COOLDOWN:
+        # Flap (Now requires Horizontal Orientation)
+        if count == 5 and orientation == 'horizontal' and (current_time - self.last_flap_time) > FLAP_COOLDOWN:
             tip_y = landmarks[12][2]
-            orientation = curr_y - tip_y
+            palm_y = landmarks[0][2] # Using wrist as reference for horizontal flap
+            
+            # For horizontal hand, we track relative vertical movement of fingers vs wrist/palm
+            # But simpler approach: Keep your existing logic but ensure hand is horizontal first
+            
+            # Recalculating relative to the hand's center might be better, 
+            # but sticking to your existing logic structure:
+            orientation_diff = curr_y - tip_y
 
-            # CASE 1: Fingers Pointing UP -> Volume UP
-            if orientation > FLAP_THRESHOLD:
+            # CASE 1: Fingers Pointing UP relative to wrist -> Volume UP
+            if orientation_diff > FLAP_THRESHOLD:
                 self.last_flap_time = current_time
                 return 'flap_up'
 
-            # CASE 2: Fingers Pointing DOWN -> Volume DOWN
-            elif orientation < -FLAP_THRESHOLD:
+            # CASE 2: Fingers Pointing DOWN relative to wrist -> Volume DOWN
+            elif orientation_diff < -FLAP_THRESHOLD:
                 self.last_flap_time = current_time
                 return 'flap_down'
 
@@ -63,7 +72,6 @@ class GestureRecogniser:
             current_hand_type = hand_label
 
             if self.prev_angle is None:
-                # Lock the hand type on first pinch
                 self.locked_hand_type = current_hand_type
                 active_hand_type = current_hand_type
                 self.prev_angle = current_angle
@@ -83,21 +91,34 @@ class GestureRecogniser:
                 if self.rotation_accumulator > ACCUMULATION_THRESHOLD:
                     self.rotation_accumulator -= ACCUMULATION_THRESHOLD
                     self.prev_angle = current_angle
+                    self.has_rotated = True # Mark that we are rotating
                     return 'pinch_clockwise'
                     
                 elif self.rotation_accumulator < -ACCUMULATION_THRESHOLD:
                     self.rotation_accumulator += ACCUMULATION_THRESHOLD
                     self.prev_angle = current_angle 
+                    self.has_rotated = True # Mark that we are rotating
                     return 'pinch_anticlockwise'
+        else:
+            # Reset rotation state when pinch is released
+            self.prev_angle = None
+            self.has_rotated = False
+            self.locked_hand_type = None
 
                 
         # Static gestures detection
 
-        if is_pinch(landmarks):
-            return 'pinch'
-        elif count == 0:
+        if count == 0:
             return 'fist'
-        elif count == 5:
+            
+        elif is_pinch(landmarks):
+            # If we have rotated recently, don't trigger the static pinch
+            if self.has_rotated:
+                return 'unknown' 
+            return 'pinch'
+            
+        # Open Palm now requires Vertical Orientation
+        elif count == 5 and orientation == 'vertical':
             return 'open_palm'
             
         return 'unknown'
