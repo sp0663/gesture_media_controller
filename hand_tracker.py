@@ -2,7 +2,7 @@ import cv2
 import mediapipe as mp
 
 class HandTracker:
-    def __init__(self, mode=False, max_hands=1, detection_con=0.6, track_con=0.6):
+    def __init__(self, mode=False, max_hands=1, detection_con=0.5, track_con=0.5):
         self.mode = mode
         self.max_hands = max_hands
         self.detection_con = detection_con
@@ -23,36 +23,28 @@ class HandTracker:
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(rgb_frame)
 
-        # ✅ FIX: self.results can be None
-        if self.results and self.results.multi_hand_landmarks:
+        if self.results.multi_hand_landmarks:
             for hand_landmarks in self.results.multi_hand_landmarks:
                 if draw:
-                    self.mp_draw.draw_landmarks(
-                        frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS
-                    )
+                    self.mp_draw.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
 
         return frame
     
-    def get_landmarks(self, frame, target_hand="Right"):
+    def get_landmarks(self, frame, hand_no = 0):
         landmark_list = []
-
-        # ✅ FIX: self.results can be None
-        if self.results and self.results.multi_hand_landmarks:
-            # if hand_no < len(self.results.multi_hand_landmarks):
-            #     my_hand = self.results.multi_hand_landmarks[hand_no]
-            #     h, w, c = frame.shape
-
-            #     for id, landmark in enumerate(my_hand.landmark):
-            #         cx, cy = int(landmark.x * w), int(landmark.y * h)
-            #         landmark_list.append([id, cx, cy])
-            for idx,hand_type in enumerate(self.results.multi_handedness):
-                hand_label=hand_type.classification[0].label
-                if hand_label==target_hand:
-                    my_hand=self.results.multi_hand_landmarks[idx]
-                    h, w, c=frame.shape
-                    
-                    for id, landmark in enumerate(my_hand.landmark):
-                        cx, cy=int(landmark.x*w), int(landmark.y*h)
-                        landmark_list.append([id,cx,cy])
-
-        return landmark_list
+        hand_label = None
+        
+        if self.results.multi_hand_landmarks:
+            my_hand = self.results.multi_hand_landmarks[hand_no]
+            
+            # Get hand label (Left or Right)
+            if self.results.multi_handedness:
+                hand_label = self.results.multi_handedness[hand_no].classification[0].label
+            
+            h, w, c = frame.shape
+            
+            for id, landmark in enumerate(my_hand.landmark):
+                cx, cy = int(landmark.x * w), int(landmark.y * h)
+                landmark_list.append([id, cx, cy])
+        
+        return landmark_list, hand_label

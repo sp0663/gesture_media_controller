@@ -18,18 +18,20 @@ def cal_angle(point1, point2, point3):
     v2 = p3 - p2
 
     cosine = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-    cosine=np.clip(cosine,-1.0,1.0)
+    cosine = np.clip(cosine, -1.0, 1.0)
     return np.degrees(np.arccos(cosine))
 
 def finger_extended(landmarks, finger_tip_id):
-
-   if finger_tip_id == 4:
+    
+    if finger_tip_id == 4:
         mcp, ip, tip = landmarks[finger_tip_id - 2], landmarks[finger_tip_id - 1], landmarks[finger_tip_id]
         angle1 = cal_angle(mcp, ip, tip)
-   else:
+    else:
         mcp, pcp, dip = landmarks[finger_tip_id - 3], landmarks[finger_tip_id - 2], landmarks[finger_tip_id - 1]
         angle1 = cal_angle(mcp, pcp, dip)
-   return(angle1>160)
+
+    return (angle1 > 160)
+    
 
 def count_extended_fingers(landmarks):
 
@@ -42,20 +44,17 @@ def count_extended_fingers(landmarks):
     
     return count
 
-def peace_sign(landmarks):
-    index_open = finger_extended(landmarks,8)
-    middle_fing_open=finger_extended(landmarks,12)
-    ring_open= finger_extended(landmarks,16)
-    pinky_open=finger_extended(landmarks,20)
+def is_pinch(landmarks):
 
-    if index_open and middle_fing_open and not ring_open and not pinky_open:
-        gesture='peace_sign'
-        return(gesture) 
+    pinch_distance = cal_distance(landmarks[4], landmarks[8])  # Thumb to index
+    hand_size = cal_distance(landmarks[0], landmarks[9])      # Wrist to middle finger
+    pinch_ratio = pinch_distance / hand_size
+    threshold = 0.25
 
-def volume(landmarks):
-    index_open = finger_extended(landmarks,8)
-    middle_fing_open=finger_extended(landmarks,12)
-    ring_open= finger_extended(landmarks,16)
-    pinky_open=finger_extended(landmarks,20)
-    if index_open and middle_fing_open and ring_open and pinky_open:
-        return('open_palm')
+    return pinch_ratio < threshold
+
+def cntr_pt(landmarks):
+        thumb_pt = np.array(landmarks[4][1:])
+        index_pt = np.array(landmarks[8][1:])
+        center_pt = (thumb_pt + index_pt) // 2
+        return (int(center_pt[0]), int(center_pt[1]))
