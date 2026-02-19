@@ -2,6 +2,8 @@ from utils import count_extended_fingers, is_pinch, cal_distance
 from collections import deque
 import time
 import math
+import pickle
+import os
 from config import ACCUMULATION_THRESHOLD, SWIPE_COOLDOWN, SWIPE_THRESHOLD
 
 class GestureRecogniser:
@@ -11,6 +13,16 @@ class GestureRecogniser:
         self.rotation_accumulator = 0.0     
         self.prev_angle = None      
         self.locked_hand_type = None    
+        
+        # Load the custom ML model if it exists
+        self.custom_model = None
+        if os.path.exists("gesture_model.pkl"):
+            try:
+                with open("gesture_model.pkl", "rb") as f:
+                    self.custom_model = pickle.load(f)
+                print("Custom ML Model loaded successfully!")
+            except Exception as e:
+                print(f"Could not load custom model: {e}")
     
     def recognise_gesture(self, landmarks, hand_label, frame):
         current_time = time.time()
@@ -25,7 +37,6 @@ class GestureRecogniser:
             velocity = math.hypot(curr_x - prev_x, curr_y - prev_y)
         self.swipe_history.append((curr_x, curr_y))
         is_moving = velocity > 20
-        # ---------------------------------------------------------
 
         # 2. SWIPES (Dynamic - High Priority)
         if count == 5 and (current_time - self.last_swipe_time) > SWIPE_COOLDOWN:
@@ -105,8 +116,6 @@ class GestureRecogniser:
             # ZONE 2: BUFFER ZONE (DEAD ZONE)
             elif abs_delta > 0.5:
                 # User is rotating slowly or has shaky hands.
-                # DO NOT trigger Static Pinch.
-                # DO NOT trigger Seek (yet).
                 return 'unknown'
 
             # ZONE 3: LOW ROTATION (STATIC FULLSCREEN)
@@ -124,4 +133,28 @@ class GestureRecogniser:
         if count == 5 and is_vertical:
             return 'open_palm'
             
+        # ---------------------------------------------------------
+        # 7. CUSTOM ML GESTURE HOOK
+        # ---------------------------------------------------------
+        if self.custom_model:
+            # Flatten and normalize landmarks exactly as done in training
+            wrist_x = landmarks[0][1]
+            wrist_y = landmarks[0][2]
+
+            flat_landmarks = []
+            for lm in landmarks:
+                relative_x = lm[1] - wrist_x
+                relative_y = lm[2] - wrist_y
+                flat_landmarks.append(relative_x)
+                flat_landmarks.append(relative_y)
+                
+            try:
+                prediction = self.custom_model.predict([flat_landmarks])[0]
+                # Trigger only if it explicitly recognizes the custom shape
+                if prediction == 'custom_gesture':
+                    return 'custom_gesture'
+            except Exception as e:
+                # Fails silently if the model expects different input dimensions
+                pass 
+                
         return 'unknown'
