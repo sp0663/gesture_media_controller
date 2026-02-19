@@ -1,124 +1,145 @@
-from utils import count_extended_fingers, is_pinch, cal_angle, cntr_pt, get_hand_orientation
+from utils import count_extended_fingers, is_pinch, cal_distance, is_index_pointing
 from collections import deque
 import time
-from config import ACCUMULATION_THRESHOLD, SWIPE_COOLDOWN, FLAP_COOLDOWN, SWIPE_THRESHOLD, FLAP_THRESHOLD
+import math
+from config import ACCUMULATION_THRESHOLD, SWIPE_COOLDOWN, SWIPE_THRESHOLD, FLAP_COOLDOWN
 
 class GestureRecogniser:
     def __init__(self, buffer_size=10):
-        self.swipe_history = deque(maxlen=buffer_size)    # Swipe - Palm position history
-        self.last_swipe_time = 0    # Swipe - Last swipe seen
-        self.rotation_accumulator = 0.0     # Pinch rotate - Rotation angle history
-        self.prev_angle = None      # Pinch rotate - Last pinch rotation angle  
-        self.locked_hand_type = None    # Pinch rotate - Locked hand label
-        self.last_flap_time = 0     # Flap - Last flap seen
-        self.has_rotated = False    # State to separate pinch from rotate
+        self.swipe_history = deque(maxlen=buffer_size)
+        self.last_swipe_time = 0
+        self.last_volume_time = 0  
+        self.last_fist_move_time = 0    # Tracks the last time the fist moved even slightly
+        self.rotation_accumulator = 0.0
+        self.vertical_accumulator = 0.0 
+        self.prev_fist_y = None         
+        self.prev_angle = None
+        self.locked_hand_type = None
     
-
     def recognise_gesture(self, landmarks, hand_label, frame):
         current_time = time.time()
         count = count_extended_fingers(landmarks)
-        orientation = get_hand_orientation(landmarks)
+        current_hand_type = hand_label if hand_label else "Right"
         
-        # Swipe Variables
-        curr_x, curr_y = landmarks[0][1], landmarks[0][2]
+        # 1. DEFINE HAND STATE
+        middle_folded = landmarks[12][2] > landmarks[9][2]
+        ring_folded = landmarks[16][2] > landmarks[13][2]
+        is_fist_state = (count == 0 and (middle_folded and ring_folded))
+        
+        # 2. POSITION TRACKING (Using Knuckle - Landmark 9)
+        curr_x, curr_y = landmarks[9][1], landmarks[9][2]
+        velocity = 0
+        if len(self.swipe_history) > 0:
+            prev_x, prev_y = self.swipe_history[-1]
+            velocity = math.hypot(curr_x - prev_x, curr_y - prev_y)
         self.swipe_history.append((curr_x, curr_y))
 
-        # Pinch Rotate Variables
-        is_locked = False
-        center_point = cntr_pt(landmarks)
-        active_hand_type = self.locked_hand_type if self.locked_hand_type else "None"
+        # 3. PROPORTIONAL VOLUME CONTROL (Fist movement)
+        if is_fist_state:
+            if self.prev_fist_y is not None:
+                dy = curr_y - self.prev_fist_y
+                
+                # SENSITIVITY FIX: If hand moves more than 2 pixels, it's "moving"
+                # This updates the timer to block the static "Mute" gesture
+                if abs(dy) > 2:
+                    self.last_fist_move_time = current_time
+                
+                self.vertical_accumulator += dy
+                
+                # Trigger volume change every 20 pixels for better "slow" control
+                volume_step = 20 
+                vol_cooldown = FLAP_COOLDOWN if 'FLAP_COOLDOWN' in globals() else 0.15
 
+                if (current_time - self.last_volume_time) > vol_cooldown:
+                    if self.vertical_accumulator < -volume_step: # Moving UP
+                        self.last_volume_time = current_time
+                        self.vertical_accumulator = 0 
+                        return 'swipe_fist_up'
+                    elif self.vertical_accumulator > volume_step: # Moving DOWN
+                        self.last_volume_time = current_time
+                        self.vertical_accumulator = 0
+                        return 'swipe_fist_down'
+            
+            self.prev_fist_y = curr_y
+        else:
+            self.prev_fist_y = None
+            self.vertical_accumulator = 0
 
-        # Dynamic Gesture Detection
-
-        # Swipe        
+        # 4. HORIZONTAL SWIPES (Next/Prev)
         if count == 5 and (current_time - self.last_swipe_time) > SWIPE_COOLDOWN:
             if len(self.swipe_history) == self.swipe_history.maxlen:
-                start_x, start_y = self.swipe_history[0]
+                start_x = self.swipe_history[0][0]
                 total_dx = curr_x - start_x
-                total_dy = curr_y - start_y
-
-                if abs(total_dx) > SWIPE_THRESHOLD and abs(total_dx) > abs(total_dy) * 2:
+                if abs(total_dx) > SWIPE_THRESHOLD:
                     self.last_swipe_time = current_time
-                    self.swipe_history.clear() 
+                    self.swipe_history.clear()
                     return 'swipe_right' if total_dx > 0 else 'swipe_left'
 
-        # Flap (Now requires Horizontal Orientation)
-        if count == 5 and orientation == 'horizontal' and (current_time - self.last_flap_time) > FLAP_COOLDOWN:
-            tip_y = landmarks[12][2]
-            palm_y = landmarks[0][2] # Using wrist as reference for horizontal flap
-            
-            # For horizontal hand, we track relative vertical movement of fingers vs wrist/palm
-            # But simpler approach: Keep your existing logic but ensure hand is horizontal first
-            
-            # Recalculating relative to the hand's center might be better, 
-            # but sticking to your existing logic structure:
-            orientation_diff = curr_y - tip_y
+        # 5. REFINED STATIC BLOCKER
+        # A: Block if moving fast (General)
+        if velocity > 20: 
+            return 'unknown'
+        
+        # B: THE VOLUME PROTECTION LOGIC
+        # If the fist moved at all in the last 0.5 seconds, block the static "Mute" (fist) return.
+        # This prevents accidental mutes while you are moving your hand slowly.
+        if is_fist_state and (current_time - self.last_fist_move_time < 0.5):
+            return 'unknown'
 
-            # CASE 1: Fingers Pointing UP relative to wrist -> Volume UP
-            if orientation_diff > FLAP_THRESHOLD:
-                self.last_flap_time = current_time
-                return 'flap_up'
+        # 6. STATIC FIST (Mute)
+        # Only triggers if the hand is a fist AND has been perfectly still for 0.5s
+        if is_fist_state:
+            return 'fist'
 
-            # CASE 2: Fingers Pointing DOWN relative to wrist -> Volume DOWN
-            elif orientation_diff < -FLAP_THRESHOLD:
-                self.last_flap_time = current_time
-                return 'flap_down'
-
-        # Pinch Rotate
+        # 7. PINCH LOGIC
         if is_pinch(landmarks):
-            is_locked = True
-            current_angle = cal_angle(landmarks[4], [0,0,0], landmarks[8])
-            current_hand_type = hand_label
-
-            if self.prev_angle is None:
-                self.locked_hand_type = current_hand_type
-                active_hand_type = current_hand_type
-                self.prev_angle = current_angle
-                self.rotation_accumulator = 0
+            pinch_cx = (landmarks[4][1] + landmarks[8][1]) / 2
+            pinch_cy = (landmarks[4][2] + landmarks[8][2]) / 2
+            dx = pinch_cx - landmarks[0][1]
+            dy = pinch_cy - landmarks[0][2]
+            current_angle = math.degrees(math.atan2(dy, dx))
             
-            else:
+            delta = 0
+            if self.prev_angle is not None:
                 delta = current_angle - self.prev_angle
                 if delta > 180: delta -= 360
                 elif delta < -180: delta += 360
-                if self.locked_hand_type == "Left":
-                    effective_delta = -delta 
-                else:
-                    effective_delta = delta  
+            else:
+                self.prev_angle = current_angle
+                self.locked_hand_type = current_hand_type
+                return 'unknown'
 
+            self.prev_angle = current_angle
+            abs_delta = abs(delta)
+
+            if abs_delta > 1.5:
+                effective_delta = -delta if self.locked_hand_type == "Left" else delta
                 self.rotation_accumulator += effective_delta
                 
                 if self.rotation_accumulator > ACCUMULATION_THRESHOLD:
                     self.rotation_accumulator -= ACCUMULATION_THRESHOLD
-                    self.prev_angle = current_angle
-                    self.has_rotated = True # Mark that we are rotating
                     return 'pinch_clockwise'
-                    
                 elif self.rotation_accumulator < -ACCUMULATION_THRESHOLD:
                     self.rotation_accumulator += ACCUMULATION_THRESHOLD
-                    self.prev_angle = current_angle 
-                    self.has_rotated = True # Mark that we are rotating
                     return 'pinch_anticlockwise'
+                return 'unknown'
+            elif abs_delta > 0.5:
+                return 'unknown'
+            else:
+                return 'pinch'
         else:
-            # Reset rotation state when pinch is released
             self.prev_angle = None
-            self.has_rotated = False
             self.locked_hand_type = None
 
-                
-        # Static gestures detection
-
-        if count == 0:
-            return 'fist'
-            
-        elif is_pinch(landmarks):
-            # If we have rotated recently, don't trigger the static pinch
-            if self.has_rotated:
-                return 'unknown' 
-            return 'pinch'
-            
-        # Open Palm now requires Vertical Orientation
-        elif count == 5 and orientation == 'vertical':
+        # 8. OPEN PALM (Play/Pause)
+        wrist_y = landmarks[0][2]
+        knuckle_y = landmarks[9][2]
+        hand_size = cal_distance(landmarks[0], landmarks[9]) or 1
+        vertical_ratio = (wrist_y - knuckle_y) / hand_size
+        
+        if count == 5 and vertical_ratio > 0.5:
             return 'open_palm'
-            
+        elif is_index_pointing(landmarks): 
+            return 'index_pointing'
+
         return 'unknown'

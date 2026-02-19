@@ -1,11 +1,15 @@
 import numpy as np
 
 def cal_distance(point1, point2):
+
     p1 = np.array([point1[1], point1[2]])
     p2 = np.array([point2[1], point2[2]])
+    
     return np.linalg.norm(p1 - p2)
 
+
 def cal_angle(point1, point2, point3):
+
     p1 = np.array([point1[1], point1[2]])
     p2 = np.array([point2[1], point2[2]])
     p3 = np.array([point3[1], point3[2]])
@@ -18,6 +22,7 @@ def cal_angle(point1, point2, point3):
     return np.degrees(np.arccos(cosine))
 
 def finger_extended(landmarks, finger_tip_id):
+    
     if finger_tip_id == 4:
         mcp, ip, tip = landmarks[finger_tip_id - 2], landmarks[finger_tip_id - 1], landmarks[finger_tip_id]
         angle1 = cal_angle(mcp, ip, tip)
@@ -26,37 +31,42 @@ def finger_extended(landmarks, finger_tip_id):
         angle1 = cal_angle(mcp, pcp, dip)
 
     return (angle1 > 160)
+    
 
 def count_extended_fingers(landmarks):
+
     count = 0
     finger_tip_id = [4, 8, 12, 16, 20]
+    
     for id in finger_tip_id:
         if finger_extended(landmarks, id):
             count += 1
+    
     return count
 
 def is_pinch(landmarks):
+
     pinch_distance = cal_distance(landmarks[4], landmarks[8])  # Thumb to index
     hand_size = cal_distance(landmarks[0], landmarks[9])      # Wrist to middle finger
     pinch_ratio = pinch_distance / hand_size
     threshold = 0.25
+
     return pinch_ratio < threshold
 
 def cntr_pt(landmarks):
-    thumb_pt = np.array(landmarks[4][1:])
-    index_pt = np.array(landmarks[8][1:])
-    center_pt = (thumb_pt + index_pt) // 2
-    return (int(center_pt[0]), int(center_pt[1]))
+        thumb_pt = np.array(landmarks[4][1:])
+        index_pt = np.array(landmarks[8][1:])
+        center_pt = (thumb_pt + index_pt) // 2
+        return (int(center_pt[0]), int(center_pt[1]))
 
-def get_hand_orientation(landmarks):
-    # Wrist (0) to Middle Finger MCP (9)
-    wrist = landmarks[0]
-    middle_mcp = landmarks[9]
+def is_index_pointing(landmarks):
+    index_extended = finger_extended(landmarks, 8)
     
-    dx = abs(wrist[1] - middle_mcp[1])
-    dy = abs(wrist[2] - middle_mcp[2])
+    others_folded = (
+        not finger_extended(landmarks, 4) and
+        not finger_extended(landmarks, 12) and
+        not finger_extended(landmarks, 16) and
+        not finger_extended(landmarks, 20)
+    )
     
-    if dx > dy:
-        return 'horizontal'
-    else:
-        return 'vertical'
+    return index_extended and others_folded
