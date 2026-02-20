@@ -1,3 +1,8 @@
+"""
+This module launches the system controller which exexutes the camera feed and starts tracking
+It also handles the system disable/enable and debouncing of static gestures based on gesture hold time
+"""
+
 import cv2
 import time
 from hand_tracker import HandTracker
@@ -16,13 +21,13 @@ gesture_start_time = None
 last_gesture = None
 triggered = False
 
-# --- NEW STATE VARIABLE ---
+# Enable/Disable system variable
 gestures_enabled = True 
 
 print("Gesture Media Controller Started!")
 print("Show gestures to control VLC")
-print("Press 'q' to quit")
 
+# Debug helper function
 def draw_debug_overlay(frame, recon):
     h, w, _ = frame.shape
     
@@ -57,23 +62,24 @@ while True:
     if landmarks:
         current_gesture = recon.recognise_gesture(landmarks, hand_label, frame)
         
-        # --- 1. TOGGLE LOGIC (Always Active) ---
+        # 1. TOGGLE LOGIC (Always Active)
         if current_gesture == 'index_pointing':
             if current_gesture != last_gesture:
                 gesture_start_time = time.time()
                 triggered = False
-                last_gesture = current_gesture  # <--- THIS WAS THE MISSING LINE!
+                last_gesture = current_gesture 
             
             hold_duration = time.time() - gesture_start_time
             
-            # DELIBERATE TOGGLE: Requires 2.0 full seconds
+            # DELIBERATE TOGGLE: 
             if hold_duration > 2.0 and not triggered:
                 gestures_enabled = not gestures_enabled
                 triggered = True
                 if DEBUG: print(f"System Enabled: {gestures_enabled}")
                 
-        # --- 2. NORMAL GESTURES (Only if Enabled) ---
+        # 2. NORMAL GESTURES (Only if Enabled)
         elif gestures_enabled:
+            # Dynamic gestures have instant execution
             if 'swipe' in current_gesture:
                 controller.execute_command(current_gesture)
                 triggered = True
@@ -92,6 +98,7 @@ while True:
                 last_gesture = current_gesture
                 if DEBUG: print(f"Pinch movement Detected: {current_gesture}")
 
+            # Static gestures have to wait for hold time to prevent repeated executions
             elif current_gesture == last_gesture and current_gesture != 'unknown':
                 hold_duration = time.time() - gesture_start_time
                 if hold_duration > GESTURE_HOLD_TIME and not triggered:
@@ -108,7 +115,7 @@ while True:
             last_gesture = None
             triggered = False
         
-        # --- 3. UI OVERLAY LOGIC ---
+        # 3. UI OVERLAY LOGIC
         if not gestures_enabled:
             cv2.putText(frame, "SYSTEM DISABLED", (10, 50), 
                         cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 3)

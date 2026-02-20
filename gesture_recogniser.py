@@ -1,20 +1,28 @@
+"""
+This module recognises all the static, dynamic and custom gestures based on various rule based logic 
+and ML model for the custom gestures. It also handles the timing cooldown for dynamic gestures 
+"""
+
 from utils import count_extended_fingers, is_pinch, cal_distance, is_index_pointing
 from collections import deque
 import time
 import math
 import pickle
 import os
-from config import ACCUMULATION_THRESHOLD, SWIPE_COOLDOWN, SWIPE_THRESHOLD, FLAP_THRESHOLD
+from config import ACCUMULATION_THRESHOLD, SWIPE_COOLDOWN, SWIPE_THRESHOLD, FIST_THRESHOLD
 
 class GestureRecogniser:
     def __init__(self, buffer_size=10):
+        # Swipe Variables
         self.swipe_history = deque(maxlen=buffer_size)    
-        self.last_swipe_time = 0    
+        self.last_swipe_time = 0
+
+        # Pinch Variables    
         self.rotation_accumulator = 0.0     
         self.prev_angle = None      
         self.locked_hand_type = None    
         
-        # New Fist Variables from branch
+        # Fist Variables
         self.last_fist_move_time = 0
         self.vertical_accumulator = 0.0
         self.prev_fist_y = None
@@ -52,7 +60,7 @@ class GestureRecogniser:
                     self.swipe_history.clear() 
                     return 'swipe_right' if total_dx > 0 else 'swipe_left'
 
-        # --- STATIC BLOCKER ---
+        # STATIC BLOCKER
         if is_moving: return 'unknown'
 
         # 3. INDEX POINTING (System Toggle - High Priority)
@@ -63,7 +71,7 @@ class GestureRecogniser:
             return 'index_pointing'
 
         # 4. FIST & DYNAMIC FIST MOVEMENT
-        index_folded = landmarks[8][2] > landmarks[5][2]   # Explicitly ensure index is down
+        index_folded = landmarks[8][2] > landmarks[5][2] 
         middle_folded = landmarks[12][2] > landmarks[9][2] 
         ring_folded = landmarks[16][2] > landmarks[13][2]
         is_fist_state = (count == 0 or (index_folded and middle_folded and ring_folded))
@@ -78,11 +86,11 @@ class GestureRecogniser:
                     self.vertical_accumulator += delta_y
                     self.last_fist_move_time = current_time
                     
-                    if self.vertical_accumulator < -FLAP_THRESHOLD: 
+                    if self.vertical_accumulator < -FIST_THRESHOLD: 
                         self.vertical_accumulator = 0
                         self.prev_fist_y = current_y 
                         return 'fist_move_up'
-                    elif self.vertical_accumulator > FLAP_THRESHOLD: 
+                    elif self.vertical_accumulator > FIST_THRESHOLD: 
                         self.vertical_accumulator = 0
                         self.prev_fist_y = current_y
                         return 'fist_move_down'
@@ -131,7 +139,7 @@ class GestureRecogniser:
                     return 'pinch_anticlockwise'
                 
                 return 'unknown' 
-            elif abs_delta > 0.5:
+            elif abs_delta > 1.0:
                 return 'unknown'
             else:
                 return 'pinch'
@@ -148,9 +156,7 @@ class GestureRecogniser:
         if count == 5 and vertical_ratio > 0.5:
             return 'open_palm'
             
-        # ---------------------------------------------------------
-        # 7. CUSTOM ML GESTURE HOOK (With Confidence Threshold)
-        # ---------------------------------------------------------
+        # 7. CUSTOM ML GESTURE
         if self.custom_model:
             wrist_x = landmarks[0][1]
             wrist_y = landmarks[0][2]

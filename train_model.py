@@ -1,3 +1,7 @@
+"""
+This module is used to train the Random Forest CLassifier model for detecting custom gesture
+It uses the samples collected using collect_gesture_data module
+"""
 import csv
 import pickle
 from sklearn.ensemble import RandomForestClassifier

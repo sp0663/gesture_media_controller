@@ -1,3 +1,7 @@
+"""
+This module uses pynput and the mapping stored in config to execute the keyboard presses
+whenever the execution command is sent after detection of the gesture
+"""
 import os
 from pynput.keyboard import Controller, Key
 from config import GESTURE_COMMANDS, VLC_KEYS

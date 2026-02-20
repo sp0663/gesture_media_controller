@@ -1,21 +1,26 @@
+"""
+This module handles the gesture-to-command mapping and the command-to-keys mapping
+It also includes threshold and cooldown variables for the gestures 
+"""
+
 # Gesture to VLC command mapping
 GESTURE_COMMANDS = {
-    # --- Standard Geometric Gestures ---
+    # Standard Gestures
     'fist': 'mute',
     'open_palm': 'play_pause',
     'pinch': 'full_screen',
     'swipe_right': 'move_next',
     'swipe_left': 'move_prev',
-    'fist_move_up': 'volume_up',      # Swapped flap for fist movement
-    'fist_move_down': 'volume_down',  # Swapped flap for fist movement
+    'fist_move_up': 'volume_up',      
+    'fist_move_down': 'volume_down',  
     'pinch_clockwise': 'jump_forward',
     'pinch_anticlockwise': 'jump_backward',
 
-    # --- Custom ML Gestures ---
+    # Custom ML Gestures
     # Will be populated automatically by app_ui.py
 }
 
-# Comprehensive VLC keyboard shortcuts
+# Comprehensive VLC keyboard shortcuts mapping
 VLC_KEYS = {
     'play_pause': 'space',
     'stop': 's',
@@ -45,9 +50,8 @@ VLC_KEYS = {
 GESTURE_HOLD_TIME = 0.5  
 ACCUMULATION_THRESHOLD = 10.0
 SWIPE_COOLDOWN = 1
-FLAP_COOLDOWN = 0.15
 SWIPE_THRESHOLD = 200
-FLAP_THRESHOLD = 30 # Kept this as it is used by your new fist movement math
+FIST_THRESHOLD = 30 
 
 # Hand tracking settings
 MAX_HANDS = 1
@@ -60,3 +64,4 @@ MAX_LATENCY_MS = 200
 
 # Debug mode
 DEBUG = True
+GESTURE_COMMANDS['peace'] = 'take_snapshot'

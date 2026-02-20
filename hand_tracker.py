@@ -1,3 +1,7 @@
+"""
+This module uses the MediaPipe library to track and acquire hand landmarks and hand label
+"""
+
 import cv2
 import mediapipe as mp
 
@@ -19,6 +23,7 @@ class HandTracker:
         self.mp_draw = mp.solutions.drawing_utils
         self.results = None
 
+    # Preprocessing and tracking hand using MediaPipe and OpenCV
     def find_hands(self, frame, draw=True):
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         self.results = self.hands.process(rgb_frame)
@@ -30,6 +35,7 @@ class HandTracker:
 
         return frame
     
+    # Acquires the landmark coordinates and hand label (left or right)
     def get_landmarks(self, frame, hand_no = 0):
         landmark_list = []
         hand_label = None
