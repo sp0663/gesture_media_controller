@@ -1,10 +1,10 @@
-from utils import count_extended_fingers, is_pinch, cal_distance
+from utils import count_extended_fingers, is_pinch, cal_distance, is_index_pointing
 from collections import deque
 import time
 import math
 import pickle
 import os
-from config import ACCUMULATION_THRESHOLD, SWIPE_COOLDOWN, SWIPE_THRESHOLD
+from config import ACCUMULATION_THRESHOLD, SWIPE_COOLDOWN, SWIPE_THRESHOLD, FLAP_THRESHOLD
 
 class GestureRecogniser:
     def __init__(self, buffer_size=10):
@@ -14,15 +14,19 @@ class GestureRecogniser:
         self.prev_angle = None      
         self.locked_hand_type = None    
         
+        # New Fist Variables from branch
+        self.last_fist_move_time = 0
+        self.vertical_accumulator = 0.0
+        self.prev_fist_y = None
+        
         # Load the custom ML model if it exists
         self.custom_model = None
         if os.path.exists("gesture_model.pkl"):
             try:
                 with open("gesture_model.pkl", "rb") as f:
                     self.custom_model = pickle.load(f)
-                print("Custom ML Model loaded successfully!")
             except Exception as e:
-                print(f"Could not load custom model: {e}")
+                pass
     
     def recognise_gesture(self, landmarks, hand_label, frame):
         current_time = time.time()
@@ -48,26 +52,49 @@ class GestureRecogniser:
                     self.swipe_history.clear() 
                     return 'swipe_right' if total_dx > 0 else 'swipe_left'
 
-        # 3. RIGID FLAP 
-        wrist_y = landmarks[0][2]
-        knuckle_y = landmarks[9][2]
-        hand_size = cal_distance(landmarks[0], landmarks[9]) or 1
-        vertical_ratio = (wrist_y - knuckle_y) / hand_size
-        is_horizontal = abs(vertical_ratio) < 0.3
-
-        if is_horizontal and count >= 4:
-            tip_y = landmarks[12][2] 
-            if tip_y < (knuckle_y - 20): return 'flap_up'
-            elif tip_y > (knuckle_y + 20): return 'flap_down'
-
         # --- STATIC BLOCKER ---
         if is_moving: return 'unknown'
 
-        # 4. FIST 
+        # 3. INDEX POINTING (System Toggle - High Priority)
+        if is_index_pointing(landmarks):
+            # Reset fist tracking variables so it doesn't glitch when transitioning
+            self.prev_fist_y = None 
+            self.vertical_accumulator = 0
+            return 'index_pointing'
+
+        # 4. FIST & DYNAMIC FIST MOVEMENT
+        index_folded = landmarks[8][2] > landmarks[5][2]   # Explicitly ensure index is down
         middle_folded = landmarks[12][2] > landmarks[9][2] 
         ring_folded = landmarks[16][2] > landmarks[13][2]
-        if count == 0 or (middle_folded and ring_folded):
-            return 'fist'
+        is_fist_state = (count == 0 or (index_folded and middle_folded and ring_folded))
+        
+        if is_fist_state:
+            current_y = landmarks[0][2] # Wrist Y
+            
+            if self.prev_fist_y is not None:
+                delta_y = current_y - self.prev_fist_y
+                
+                if abs(delta_y) > 2.0:  
+                    self.vertical_accumulator += delta_y
+                    self.last_fist_move_time = current_time
+                    
+                    if self.vertical_accumulator < -FLAP_THRESHOLD: 
+                        self.vertical_accumulator = 0
+                        self.prev_fist_y = current_y 
+                        return 'fist_move_up'
+                    elif self.vertical_accumulator > FLAP_THRESHOLD: 
+                        self.vertical_accumulator = 0
+                        self.prev_fist_y = current_y
+                        return 'fist_move_down'
+            
+            self.prev_fist_y = current_y
+            
+            if (current_time - self.last_fist_move_time) > 0.3:
+                return 'fist'
+            return 'unknown'
+        else:
+            self.prev_fist_y = None
+            self.vertical_accumulator = 0
 
         # 5. PINCH LOGIC 
         if is_pinch(landmarks):
@@ -112,9 +139,13 @@ class GestureRecogniser:
             self.prev_angle = None
             self.locked_hand_type = None
 
-        # 6. OPEN PALM 
-        is_vertical = vertical_ratio > 0.5
-        if count == 5 and is_vertical:
+        # 6. OPEN PALM
+        wrist_y = landmarks[0][2]
+        knuckle_y = landmarks[9][2]
+        hand_size = cal_distance(landmarks[0], landmarks[9]) or 1
+        vertical_ratio = (wrist_y - knuckle_y) / hand_size
+        
+        if count == 5 and vertical_ratio > 0.5:
             return 'open_palm'
             
         # ---------------------------------------------------------
@@ -130,15 +161,11 @@ class GestureRecogniser:
                 flat_landmarks.append(lm[2] - wrist_y)
                 
             try:
-                # Get probability array
                 probabilities = self.custom_model.predict_proba([flat_landmarks])[0]
                 classes = self.custom_model.classes_
-                
-                # Find best guess and its confidence
                 max_prob = max(probabilities)
                 best_class = classes[list(probabilities).index(max_prob)]
                 
-                # TRIGGER ONLY IF > 80% CONFIDENT
                 if max_prob > 0.80 and best_class.lower() not in ['background', 'neutral', 'none']:
                     return best_class
             except Exception as e:

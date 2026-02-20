@@ -6,65 +6,48 @@ GESTURE_COMMANDS = {
     'pinch': 'full_screen',
     'swipe_right': 'move_next',
     'swipe_left': 'move_prev',
-    'flap_up': 'volume_up',
-    'flap_down': 'volume_down',
+    'fist_move_up': 'volume_up',      # Swapped flap for fist movement
+    'fist_move_down': 'volume_down',  # Swapped flap for fist movement
     'pinch_clockwise': 'jump_forward',
     'pinch_anticlockwise': 'jump_backward',
 
     # --- Custom ML Gestures ---
-    # Map your trained ML gesture names to any command from the VLC_KEYS list below!
-    # Example:
-    # 'peace_sign': 'speed_up',
-    # 'thumbs_down': 'slow_down',
-    # 'spiderman': 'take_snapshot',
+    # Will be populated automatically by app_ui.py
 }
 
 # Comprehensive VLC keyboard shortcuts
 VLC_KEYS = {
-    # Core Playback
     'play_pause': 'space',
     'stop': 's',
     'full_screen': 'f',
-    
-    # Volume Controls
     'mute': 'm',
     'volume_up': 'ctrl+up',
     'volume_down': 'ctrl+down',
-    
-    # Track & Playlist Navigation
     'move_next': 'n',
     'move_prev': 'p',
     'toggle_loop': 'l',
     'toggle_random': 'r',
-    
-    # Time Seeking
-    'jump_forward': 'alt+right',        # Short jump (+10 seconds)
-    'jump_backward': 'alt+left',        # Short jump (-10 seconds)
-    'jump_forward_long': 'ctrl+right',  # Medium jump (+1 minute)
-    'jump_backward_long': 'ctrl+left',  # Medium jump (-1 minute)
-    
-    # Playback Speed
+    'jump_forward': 'alt+right',
+    'jump_backward': 'alt+left',
+    'jump_forward_long': 'ctrl+right',
+    'jump_backward_long': 'ctrl+left',
     'speed_up': ']',
     'slow_down': '[',
     'normal_speed': '=',
-    
-    # Media & Tracks
     'next_subtitle': 'v',
     'next_audio_track': 'b',
-    
-    # App & Utility Controls
     'take_snapshot': 'shift+s',
     'show_time': 't',
     'quit_vlc': 'ctrl+q'
 }
 
 # Gesture recognition settings
-GESTURE_HOLD_TIME = 0.5  # seconds - how long gesture must be held to trigger
+GESTURE_HOLD_TIME = 0.5  
 ACCUMULATION_THRESHOLD = 10.0
 SWIPE_COOLDOWN = 1
 FLAP_COOLDOWN = 0.15
 SWIPE_THRESHOLD = 200
-FLAP_THRESHOLD = 30
+FLAP_THRESHOLD = 30 # Kept this as it is used by your new fist movement math
 
 # Hand tracking settings
 MAX_HANDS = 1
@@ -77,5 +60,3 @@ MAX_LATENCY_MS = 200
 
 # Debug mode
 DEBUG = True
-
-GESTURE_COMMANDS['peace'] = 'take_snapshot'

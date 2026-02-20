@@ -16,6 +16,9 @@ gesture_start_time = None
 last_gesture = None
 triggered = False
 
+# --- NEW STATE VARIABLE ---
+gestures_enabled = True 
+
 print("Gesture Media Controller Started!")
 print("Show gestures to control VLC")
 print("Press 'q' to quit")
@@ -54,43 +57,74 @@ while True:
     if landmarks:
         current_gesture = recon.recognise_gesture(landmarks, hand_label, frame)
         
-        if 'swipe' in current_gesture:
-            controller.execute_command(current_gesture)
-            triggered = True
-            last_gesture = current_gesture
-            if DEBUG: print(f"Swipe Detected: {current_gesture}")
-
-        elif 'flap' in current_gesture:
-            controller.execute_command(current_gesture)
-            triggered = True
-            last_gesture = current_gesture
-            if DEBUG: print(f"Flap Detected: {current_gesture}")
-
-        elif 'pinch_' in current_gesture:
-            controller.execute_command(current_gesture)
-            triggered = True
-            last_gesture = current_gesture
-            if DEBUG: print(f"Pinch movement Detected: {current_gesture}")
-
-        elif current_gesture == last_gesture and current_gesture != 'unknown':
+        # --- 1. TOGGLE LOGIC (Always Active) ---
+        if current_gesture == 'index_pointing':
+            if current_gesture != last_gesture:
+                gesture_start_time = time.time()
+                triggered = False
+                last_gesture = current_gesture  # <--- THIS WAS THE MISSING LINE!
+            
             hold_duration = time.time() - gesture_start_time
-            if hold_duration > GESTURE_HOLD_TIME and not triggered:
+            
+            # DELIBERATE TOGGLE: Requires 2.0 full seconds
+            if hold_duration > 2.0 and not triggered:
+                gestures_enabled = not gestures_enabled
+                triggered = True
+                if DEBUG: print(f"System Enabled: {gestures_enabled}")
+                
+        # --- 2. NORMAL GESTURES (Only if Enabled) ---
+        elif gestures_enabled:
+            if 'swipe' in current_gesture:
                 controller.execute_command(current_gesture)
                 triggered = True
-                if DEBUG: print(f"Held Gesture Executed: {current_gesture}")
+                last_gesture = current_gesture
+                if DEBUG: print(f"Swipe Detected: {current_gesture}")
+
+            elif 'fist_move_' in current_gesture:
+                controller.execute_command(current_gesture)
+                triggered = True
+                last_gesture = current_gesture
+                if DEBUG: print(f"Fist Movement: {current_gesture}")
+
+            elif 'pinch_' in current_gesture:
+                controller.execute_command(current_gesture)
+                triggered = True
+                last_gesture = current_gesture
+                if DEBUG: print(f"Pinch movement Detected: {current_gesture}")
+
+            elif current_gesture == last_gesture and current_gesture != 'unknown':
+                hold_duration = time.time() - gesture_start_time
+                if hold_duration > GESTURE_HOLD_TIME and not triggered:
+                    controller.execute_command(current_gesture)
+                    triggered = True
+                    if DEBUG: print(f"Held Gesture Executed: {current_gesture}")
+            
+            elif current_gesture != last_gesture:
+                last_gesture = current_gesture
+                gesture_start_time = time.time()
+                triggered = False
         
-        elif current_gesture != last_gesture:
-            last_gesture = current_gesture
-            gesture_start_time = time.time()
+        else:
+            last_gesture = None
             triggered = False
         
-        color = (0, 255, 0) if current_gesture != 'unknown' else (0, 165, 255)
-        cv2.putText(frame, f"Gesture: {current_gesture}", 
-                    (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
+        # --- 3. UI OVERLAY LOGIC ---
+        if not gestures_enabled:
+            cv2.putText(frame, "SYSTEM DISABLED", (10, 50), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 3)
+            progress_label = "Hold Index to Enable"
+        else:
+            color = (0, 255, 0) if current_gesture != 'unknown' else (0, 165, 255)
+            cv2.putText(frame, f"Gesture: {current_gesture}", 
+                        (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.2, color, 3)
+            progress_label = "Hold..."
         
+        # Draw Progress Bar
         if gesture_start_time and current_gesture != 'unknown':
             hold_time = time.time() - gesture_start_time
-            progress = min(hold_time / GESTURE_HOLD_TIME, 1.0)
+            
+            target_time = 2.0 if current_gesture == 'index_pointing' else GESTURE_HOLD_TIME
+            progress = min(hold_time / target_time, 1.0)
             
             bar_width = 200
             bar_height = 20
@@ -98,7 +132,8 @@ while True:
             
             cv2.rectangle(frame, (10, 90), (10 + bar_width, 90 + bar_height), (50, 50, 50), -1)
             cv2.rectangle(frame, (10, 90), (10 + filled, 90 + bar_height), (0, 255, 0), -1)
-            cv2.putText(frame, "Hold...", (10, 85), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(frame, progress_label, (10, 85), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            
     else:
         last_gesture = None
         triggered = False
