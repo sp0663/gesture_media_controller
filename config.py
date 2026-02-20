@@ -1,36 +1,53 @@
 # Gesture to VLC command mapping
 GESTURE_COMMANDS = {
+    # --- Standard Geometric Gestures ---
     'fist': 'mute',
     'open_palm': 'play_pause',
     'pinch': 'full_screen',
     'swipe_right': 'move_next',
     'swipe_left': 'move_prev',
-    'flap_up': 'volume_up',
-    'flap_down': 'volume_down',
+    'fist_move_up': 'volume_up',      # Swapped flap for fist movement
+    'fist_move_down': 'volume_down',  # Swapped flap for fist movement
     'pinch_clockwise': 'jump_forward',
-    'pinch_anticlockwise': 'jump_backward'
+    'pinch_anticlockwise': 'jump_backward',
+
+    # --- Custom ML Gestures ---
+    # Will be populated automatically by app_ui.py
 }
 
-# VLC keyboard shortcuts
+# Comprehensive VLC keyboard shortcuts
 VLC_KEYS = {
     'play_pause': 'space',
-    'mute': 'm',
+    'stop': 's',
     'full_screen': 'f',
-    'move_next': 'n',
-    'move_prev': 'p',
+    'mute': 'm',
     'volume_up': 'ctrl+up',
     'volume_down': 'ctrl+down',
+    'move_next': 'n',
+    'move_prev': 'p',
+    'toggle_loop': 'l',
+    'toggle_random': 'r',
     'jump_forward': 'alt+right',
-    'jump_backward': 'alt+left'
+    'jump_backward': 'alt+left',
+    'jump_forward_long': 'ctrl+right',
+    'jump_backward_long': 'ctrl+left',
+    'speed_up': ']',
+    'slow_down': '[',
+    'normal_speed': '=',
+    'next_subtitle': 'v',
+    'next_audio_track': 'b',
+    'take_snapshot': 'shift+s',
+    'show_time': 't',
+    'quit_vlc': 'ctrl+q'
 }
 
 # Gesture recognition settings
-GESTURE_HOLD_TIME = 0.5  # seconds - how long gesture must be held to trigger
+GESTURE_HOLD_TIME = 0.5  
 ACCUMULATION_THRESHOLD = 10.0
 SWIPE_COOLDOWN = 1
 FLAP_COOLDOWN = 0.15
 SWIPE_THRESHOLD = 200
-FLAP_THRESHOLD = 30
+FLAP_THRESHOLD = 30 # Kept this as it is used by your new fist movement math
 
 # Hand tracking settings
 MAX_HANDS = 1
@@ -42,4 +59,4 @@ TARGET_FPS = 15
 MAX_LATENCY_MS = 200
 
 # Debug mode
-DEBUG = True  
+DEBUG = True
