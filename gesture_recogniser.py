@@ -29,7 +29,7 @@ class GestureRecogniser:
         count = count_extended_fingers(landmarks)
         current_hand_type = hand_label if hand_label else "Right"
         
-        # 1. VELOCITY GATE (Blocks Static Gestures during Swipes)
+        # 1. VELOCITY GATE
         curr_x, curr_y = landmarks[0][1], landmarks[0][2]
         velocity = 0
         if len(self.swipe_history) > 0:
@@ -38,7 +38,7 @@ class GestureRecogniser:
         self.swipe_history.append((curr_x, curr_y))
         is_moving = velocity > 20
 
-        # 2. SWIPES (Dynamic - High Priority)
+        # 2. SWIPES 
         if count == 5 and (current_time - self.last_swipe_time) > SWIPE_COOLDOWN:
             if len(self.swipe_history) == self.swipe_history.maxlen:
                 start_x = self.swipe_history[0][0]
@@ -48,7 +48,7 @@ class GestureRecogniser:
                     self.swipe_history.clear() 
                     return 'swipe_right' if total_dx > 0 else 'swipe_left'
 
-        # 3. RIGID FLAP (Volume - Dynamic)
+        # 3. RIGID FLAP 
         wrist_y = landmarks[0][2]
         knuckle_y = landmarks[9][2]
         hand_size = cal_distance(landmarks[0], landmarks[9]) or 1
@@ -62,24 +62,21 @@ class GestureRecogniser:
 
         # --- STATIC BLOCKER ---
         if is_moving: return 'unknown'
-        # ----------------------
 
-        # 4. FIST (Static - Priority over Pinch)
+        # 4. FIST 
         middle_folded = landmarks[12][2] > landmarks[9][2] 
         ring_folded = landmarks[16][2] > landmarks[13][2]
         if count == 0 or (middle_folded and ring_folded):
             return 'fist'
 
-        # 5. PINCH LOGIC (The Rotation Gate Fix)
+        # 5. PINCH LOGIC 
         if is_pinch(landmarks):
-            # Calculate Center & Angle
             pinch_cx = (landmarks[4][1] + landmarks[8][1]) / 2
             pinch_cy = (landmarks[4][2] + landmarks[8][2]) / 2
             dx = pinch_cx - landmarks[0][1]
             dy = pinch_cy - landmarks[0][2]
             current_angle = math.degrees(math.atan2(dy, dx))
             
-            # Rotation Delta Calculation
             delta = 0
             if self.prev_angle is not None:
                 delta = current_angle - self.prev_angle
@@ -88,22 +85,17 @@ class GestureRecogniser:
             else:
                 self.prev_angle = current_angle
                 self.locked_hand_type = current_hand_type
-                return 'unknown' # First frame of pinch -> Wait
+                return 'unknown' 
 
-            # Update Angle State
             self.prev_angle = current_angle
-            
-            # --- THE 3 ZONES ---
             abs_delta = abs(delta)
 
-            # ZONE 1: HIGH ROTATION (SEEK)
             if abs_delta > 1.5:
                 if self.locked_hand_type == "Left": effective_delta = -delta 
                 else: effective_delta = delta  
                 
                 self.rotation_accumulator += effective_delta
                 
-                # Trigger Seek
                 if self.rotation_accumulator > ACCUMULATION_THRESHOLD:
                     self.rotation_accumulator -= ACCUMULATION_THRESHOLD
                     return 'pinch_clockwise'
@@ -111,50 +103,45 @@ class GestureRecogniser:
                     self.rotation_accumulator += ACCUMULATION_THRESHOLD
                     return 'pinch_anticlockwise'
                 
-                return 'unknown' # Rotating but threshold not met yet
-
-            # ZONE 2: BUFFER ZONE (DEAD ZONE)
+                return 'unknown' 
             elif abs_delta > 0.5:
-                # User is rotating slowly or has shaky hands.
                 return 'unknown'
-
-            # ZONE 3: LOW ROTATION (STATIC FULLSCREEN)
             else:
-                # Hand is rock solid stable.
                 return 'pinch'
-        
         else:
             self.prev_angle = None
             self.locked_hand_type = None
 
-        # 6. OPEN PALM (Play/Pause)
-        # Using strict vertical check from before
+        # 6. OPEN PALM 
         is_vertical = vertical_ratio > 0.5
         if count == 5 and is_vertical:
             return 'open_palm'
             
         # ---------------------------------------------------------
-        # 7. CUSTOM ML GESTURE HOOK
+        # 7. CUSTOM ML GESTURE HOOK (With Confidence Threshold)
         # ---------------------------------------------------------
         if self.custom_model:
-            # Flatten and normalize landmarks exactly as done in training
             wrist_x = landmarks[0][1]
             wrist_y = landmarks[0][2]
 
             flat_landmarks = []
             for lm in landmarks:
-                relative_x = lm[1] - wrist_x
-                relative_y = lm[2] - wrist_y
-                flat_landmarks.append(relative_x)
-                flat_landmarks.append(relative_y)
+                flat_landmarks.append(lm[1] - wrist_x)
+                flat_landmarks.append(lm[2] - wrist_y)
                 
             try:
-                prediction = self.custom_model.predict([flat_landmarks])[0]
-                # Trigger only if it explicitly recognizes the custom shape
-                if prediction == 'custom_gesture':
-                    return 'custom_gesture'
+                # Get probability array
+                probabilities = self.custom_model.predict_proba([flat_landmarks])[0]
+                classes = self.custom_model.classes_
+                
+                # Find best guess and its confidence
+                max_prob = max(probabilities)
+                best_class = classes[list(probabilities).index(max_prob)]
+                
+                # TRIGGER ONLY IF > 80% CONFIDENT
+                if max_prob > 0.80 and best_class.lower() not in ['background', 'neutral', 'none']:
+                    return best_class
             except Exception as e:
-                # Fails silently if the model expects different input dimensions
                 pass 
                 
         return 'unknown'
