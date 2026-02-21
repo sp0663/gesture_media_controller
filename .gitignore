@@ -6,6 +6,7 @@ __pycache__/
 .Python
 venv/
 env/
+.venv/
 
 # IDE
 .vscode/
@@ -23,3 +24,4 @@ Thumbs.db
 test_videos/
 *.csv
 *.pkl
+custom_mapping.txt
