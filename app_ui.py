@@ -2,6 +2,20 @@
 This module executes the system UI which is used to launch the controller or collect samples  new custom gesture using ML model 
 and map to new VLC function or delete existing ML model gestures
 """
+"""
+OPERATING PROCEDURE
+
+    Launch UI: Run python app_ui.py to open the control dashboard and to use the whole system.
+
+    Train (Optional): Close the controller if open, Click 'Train New Gestures' to add custom ML gestures.
+    IMPORTANT: Always record a 'background' gesture so the model learns your resting hand state.
+
+    Map: Select a gesture and a VLC action, then click 'Save Mapping'.
+    NOTE: You must repeat this save process for every custom gesture you trained.
+    you can delete the ml model as a whole with the "delete custom data" button
+
+    Launch: Click 'Launch Controller' to start the camera and control VLC.
+    """
 
 import tkinter as tk
 from tkinter import messagebox
