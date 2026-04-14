@@ -1,3 +1,7 @@
+"""
+This module is used to collect the samples for the custom gesture which will be used to train the ML model
+"""
+
 import cv2
 import numpy as np
 import csv
@@ -39,7 +43,7 @@ def collect_data():
             print(f"Recording '{gesture_name}'...")
             count = 0
             
-            # Increased to 300 for robust variance
+            # 300 for robust variance
             target_frames = 300 
             
             while count < target_frames:
@@ -48,7 +52,7 @@ def collect_data():
                 frame = tracker.find_hands(frame)
                 landmarks, _ = tracker.get_landmarks(frame)
                 
-                # --- VARIANCE WARNING UI ---
+                # VARIANCE WARNING UI
                 # Creates a flashing effect every 15 frames
                 if count % 30 < 15:
                     cv2.putText(frame, "MOVE & ROTATE HAND SLIGHTLY!", (10, 90), 

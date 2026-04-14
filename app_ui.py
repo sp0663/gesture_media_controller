@@ -1,3 +1,22 @@
+"""
+This module executes the system UI which is used to launch the controller or collect samples  new custom gesture using ML model 
+and map to new VLC function or delete existing ML model gestures
+"""
+"""
+OPERATING PROCEDURE
+
+    Launch UI: Run python app_ui.py to open the control dashboard and to use the whole system.
+
+    Train (Optional): Close the controller if open, Click 'Train New Gestures' to add custom ML gestures.
+    IMPORTANT: Always record a 'background' gesture so the model learns your resting hand state.
+
+    Map: Select a gesture and a VLC action, then click 'Save Mapping'.
+    NOTE: You must repeat this save process for every custom gesture you trained.
+    you can delete the ml model as a whole with the "delete custom data" button
+
+    Launch: Click 'Launch Controller' to start the camera and control VLC.
+    """
+
 import tkinter as tk
 from tkinter import messagebox
 import os
@@ -16,11 +35,11 @@ class GestureControllerUI:
         
         self.controller_process = None
 
-        # --- HEADER ---
+        # HEADER 
         tk.Label(root, text="HCI Media Controller", font=("Arial", 16, "bold")).pack(pady=(0, 5))
         tk.Label(root, text="NVIDIA Jetson Nano Edition", font=("Arial", 10, "italic"), fg="gray").pack(pady=(0, 15))
 
-        # --- MAIN CONTROLLER SECTION ---
+        # MAIN CONTROLLER SECTION
         self.status_var = tk.StringVar(value="Status: INACTIVE")
         self.status_label = tk.Label(root, textvariable=self.status_var, font=("Arial", 12, "bold"), fg="red")
         self.status_label.pack(pady=(0, 10))
@@ -32,7 +51,7 @@ class GestureControllerUI:
 
         tk.Frame(root, height=2, bd=1, relief="sunken").pack(fill="x", pady=15)
 
-        # --- GESTURE TRAINING ---
+        # GESTURE TRAINING
         tk.Label(root, text="1. Train Custom ML Gestures", font=("Arial", 12, "bold")).pack(pady=(0, 5))
 
         self.train_btn = tk.Button(root, text="Train New Gestures", width=25, 
@@ -40,7 +59,7 @@ class GestureControllerUI:
                                    command=self.train_gesture)
         self.train_btn.pack(pady=5)
         
-        # BROUGHT BACK THE DELETE BUTTON
+        # DELETE BUTTON
         self.delete_btn = tk.Button(root, text="Delete Custom Data", width=25, 
                                     bg="#f44336", fg="white", font=("Arial", 10),
                                     command=self.delete_gesture)
@@ -48,7 +67,7 @@ class GestureControllerUI:
         
         tk.Frame(root, height=2, bd=1, relief="sunken").pack(fill="x", pady=15)
 
-        # --- DYNAMIC MAPPING SECTION ---
+        # DYNAMIC MAPPING SECTION
         tk.Label(root, text="2. Map Gestures to VLC", font=("Arial", 12, "bold")).pack(pady=(0, 5))
         
         mapping_frame = tk.Frame(root)
@@ -78,7 +97,7 @@ class GestureControllerUI:
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def load_trained_gestures(self):
-        """Reads the trained model and populates the UI dropdown dynamically."""
+        # Reads the trained model and populates the UI dropdown dynamically.
         if os.path.exists("gesture_model.pkl"):
             try:
                 with open("gesture_model.pkl", "rb") as f:
@@ -95,6 +114,7 @@ class GestureControllerUI:
                 print(f"Could not load model classes: {e}")
 
     def save_mapping(self):
+        # Updates the config file for new custom gesture
         gesture = self.gesture_var.get()
         action = self.action_var.get()
         
@@ -117,6 +137,7 @@ class GestureControllerUI:
             messagebox.showerror("Error", f"Failed to update config.py: {e}")
 
     def toggle_controller(self):
+        # Executes the main system controller
         if self.controller_process is None or self.controller_process.poll() is not None:
             print("Launching main.py...")
             self.controller_process = subprocess.Popen([sys.executable, "main.py"])
@@ -138,6 +159,7 @@ class GestureControllerUI:
             self.map_btn.config(state="normal")
 
     def train_gesture(self):
+        # Executes the sample collection and training model
         messagebox.showinfo("Train Gesture", "Opening data collection script in your terminal. Follow the prompts there.")
         
         def run_training_pipeline():
@@ -158,7 +180,7 @@ class GestureControllerUI:
         threading.Thread(target=run_training_pipeline, daemon=True).start()
 
     def delete_gesture(self):
-        # UPDATED: Now clears out the dropdown menu as well
+        # Clears the dropdown menu
         files_to_delete = ["gesture_model.pkl", "gesture_data.csv"]
         deleted_any = False
         

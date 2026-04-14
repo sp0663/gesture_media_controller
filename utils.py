@@ -1,3 +1,7 @@
+"""
+This module has helper functions which are used in rule based detection
+"""
+
 import numpy as np
 
 def cal_distance(point1, point2):
@@ -47,7 +51,6 @@ def cntr_pt(landmarks):
     cntr_pt = (thumb_pt + index_pt) / 2
     return cntr_pt
 
-# --- ADDED FROM MAIN BRANCH ---
 def is_index_pointing(landmarks):
     if count_extended_fingers(landmarks) == 1 and finger_extended(landmarks, 8):
         return True

@@ -1,48 +1,56 @@
+"""
+This module uses the MediaPipe library to track and acquire hand landmarks and hand label
+"""
+
 import cv2
-import numpy as np
-from openvino.runtime import Core
-from collections import deque
+import mediapipe as mp
 
 class HandTracker:
-    def __init__(self, model_path="hand_landmark.xml"):
-        self.core = Core()
-        self.landmark_history = deque(maxlen=5) 
-        print("Compiling Hand Landmarks for Acceleration...")
-        self.model = self.core.read_model(model_path)
-        # Using CPU/NPU for max performance
-        self.compiled_model = self.core.compile_model(self.model, "CPU")
-        self.infer_request = self.compiled_model.create_infer_request()
-        self.input_layer = self.compiled_model.input(0)
-        self.output_layer = self.compiled_model.output(0)
+    def __init__(self, mode=False, max_hands=1, detection_con=0.5, track_con=0.5):
+        self.mode = mode
+        self.max_hands = max_hands
+        self.detection_con = detection_con
+        self.track_con = track_con
+        
+        self.mp_hands = mp.solutions.hands
+        self.hands = self.mp_hands.Hands(
+            static_image_mode=self.mode,
+            max_num_hands=self.max_hands,
+            min_detection_confidence=self.detection_con,
+            min_tracking_confidence=self.track_con
+        )
+        
+        self.mp_draw = mp.solutions.drawing_utils
         self.results = None
 
-    def find_hands(self, frame):
-        # Resize for the NPU model (256x256)
-        resized = cv2.resize(frame, (256, 256))
-        input_data = np.expand_dims(resized, axis=0).astype(np.float32)
-        self.infer_request.infer(inputs={self.input_layer: input_data})
-        self.results = self.infer_request.get_output_tensor(0).data
+    # Preprocessing and tracking hand using MediaPipe and OpenCV
+    def find_hands(self, frame, draw=True):
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        self.results = self.hands.process(rgb_frame)
+
+        if self.results.multi_hand_landmarks:
+            for hand_landmarks in self.results.multi_hand_landmarks:
+                if draw:
+                    self.mp_draw.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
+
         return frame
     
-    def get_landmarks(self, frame, hand_no=0):
-        h, w, _ = frame.shape
+    # Acquires the landmark coordinates and hand label (left or right)
+    def get_landmarks(self, frame, hand_no = 0):
         landmark_list = []
-        if self.results is not None:
-            landmarks = self.results.reshape(-1, 3)
-            for id, lm in enumerate(landmarks):
-                # TAMING THE 160,000: Divide by 1000, then by 256
-                norm_x = (lm[0] / 1000.0) / 256.0
-                norm_y = (lm[1] / 1000.0) / 256.0
-                
-                # Ensure they stay within 0-1 range
-                norm_x = max(0, min(1, norm_x))
-                norm_y = max(0, min(1, norm_y))
-
-                cx, cy = int(norm_x * w), int(norm_y * h)
-                landmark_list.append([id, cx, cy])
+        hand_label = None
+        
+        if self.results.multi_hand_landmarks:
+            my_hand = self.results.multi_hand_landmarks[hand_no]
             
-            if landmark_list:
-                self.landmark_history.append(landmark_list)
-                avg = np.mean(self.landmark_history, axis=0).astype(int).tolist()
-                return avg, "Right"
-        return [], None
+            # Get hand label (Left or Right)
+            if self.results.multi_handedness:
+                hand_label = self.results.multi_handedness[hand_no].classification[0].label
+            
+            h, w, c = frame.shape
+            
+            for id, landmark in enumerate(my_hand.landmark):
+                cx, cy = int(landmark.x * w), int(landmark.y * h)
+                landmark_list.append([id, cx, cy])
+        
+        return landmark_list, hand_label
